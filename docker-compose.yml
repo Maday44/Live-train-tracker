@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trainwatch
+      POSTGRES_PASSWORD: trainwatch
+      POSTGRES_DB: trainwatch
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  ingest:
+    build: ./services/ingest
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - db
+
+  enrichment:
+    build: ./services/enrichment
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - db
+
+  api:
+    build: ./services/api
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./web:/web:ro
+
+  alerts:
+    build: ./services/alerts
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      API_BASE: http://api:8000
+    depends_on:
+      - api
+
+volumes:
+  db_data:
