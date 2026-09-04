@@ -81,9 +81,19 @@ class TDListener(stomp.ConnectionListener):
 conn = None
 
 
+# def connect():
+#     global conn
+#     conn = stomp.Connection([(STOMP_HOST, STOMP_PORT)], heartbeats=(15000, 15000))
+#     conn.set_listener("", TDListener())
+#     conn.connect(NR_USER, NR_PASS, wait=True)
+#     conn.subscribe(destination=TOPIC, id=1, ack="auto")
+#     print(f"Subscribed to {TOPIC}. Watching for berth steps... (Ctrl+C to stop)")
+
+
 def connect():
     global conn
     conn = stomp.Connection([(STOMP_HOST, STOMP_PORT)], heartbeats=(15000, 15000))
+    conn.set_ssl(for_hosts=[(STOMP_HOST, STOMP_PORT)])   # <-- add this line
     conn.set_listener("", TDListener())
     conn.connect(NR_USER, NR_PASS, wait=True)
     conn.subscribe(destination=TOPIC, id=1, ack="auto")
