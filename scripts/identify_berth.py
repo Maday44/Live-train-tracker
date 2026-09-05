@@ -1,111 +1,123 @@
-"""
-Phase 1 helper: connect to the Network Rail TD feed for your area and log
-every berth step in real time, so you can correlate a train you physically
-watch go past with the berth ID(s) involved.
+#!/usr/bin/env python3
 
-Usage:
-    1. Fill in NR_FEED_USERNAME / NR_FEED_PASSWORD / TD_AREA_CODE in .env
-       (or export them as environment variables).
-    2. Run: python scripts/identify_berth.py
-    3. Stand somewhere you can see/hear the train pass, note the wall-clock
-       time as precisely as you can.
-    4. Ctrl+C to stop, then grep the printed log for events near that
-       timestamp. The berth(s) involved in a step at that time are your
-       candidates — repeat for a couple more trains to confirm.
-
-Requires: pip install stomp.py python-dotenv
-"""
-
-import os
+import json
 import sys
-import time
-import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime
+from time import sleep
 
 import stomp
-from dotenv import load_dotenv
+from pytz import timezone
 
-load_dotenv()
+TIMEZONE_LONDON = timezone("Europe/London")
 
-NR_USER = os.environ["NR_FEED_USERNAME"]
-NR_PASS = os.environ["NR_FEED_PASSWORD"]
-STOMP_HOST = os.environ.get("NR_STOMP_HOST", "publicdatafeeds.networkrail.co.uk")
-STOMP_PORT = int(os.environ.get("NR_STOMP_PORT", "61618"))
-TD_AREA_CODE = os.environ["TD_AREA_CODE"]
+# Message Types
+C_BERTH_STEP = "CA"
+C_BERTH_CANCEL = "CB"
+C_BERTH_INTERPOSE = "CC"
 
-TOPIC = f"/topic/TD_{TD_AREA_CODE}_SIG_AREA"
-
-
-def parse_c_class(xml_bytes):
-    """
-    Pull (from_berth, to_berth, headcode, timestamp) out of a C-class
-    (berth step) TD message. Real messages nest this inside a <Sroot>/
-    <TD> wrapper; adjust the tag names below if your feed area's schema
-    differs slightly (check a few raw messages first if this comes back
-    empty).
-    """
-    root = ET.fromstring(xml_bytes)
-    results = []
-    for msg in root.iter():
-        if msg.tag.endswith("CA_MSG"):  # berth step message
-            from_berth = msg.findtext("area_id", "") + msg.findtext("from", "")
-            to_berth = msg.findtext("area_id", "") + msg.findtext("to", "")
-            headcode = msg.findtext("descr", "")
-            ts = msg.findtext("time", "")
-            results.append((from_berth, to_berth, headcode, ts))
-    return results
+TOPIC = "/topic/TD_ALL_SIG_AREA"
 
 
-class TDListener(stomp.ConnectionListener):
+def process_td_message(parsed_body):
+    """Parses JSON array directly from Network Rail TD feed."""
+    for outer_message in parsed_body:
+        message = list(outer_message.values())[0]
+        message_type = message.get("msg_type")
+
+        if message_type in [C_BERTH_STEP, C_BERTH_CANCEL, C_BERTH_INTERPOSE]:
+            area_id = message.get("area_id", "")
+            timestamp = int(message.get("time", 0)) / 1000
+            description = message.get("descr", "")
+            from_berth = message.get("from", "")
+            to_berth = message.get("to", "")
+
+            utc_datetime = datetime.utcfromtimestamp(timestamp)
+            uk_datetime = TIMEZONE_LONDON.fromutc(utc_datetime)
+
+            print(
+                "{} [{:2}] {:2} {:4} {:>5}->{:5}".format(
+                    uk_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                    message_type,
+                    area_id,
+                    description,
+                    from_berth,
+                    to_berth,
+                )
+            )
+
+
+class VerboseListener(stomp.ConnectionListener):
+    def on_connecting(self, host_and_port):
+        print(f"-> Attempting STOMP handshake with {host_and_port}...")
+
+    def on_connected(self, frame):
+        print("-> STOMP Handshake Successful! Connected to broker.")
+
     def on_message(self, frame):
         try:
-            events = parse_c_class(frame.body.encode())
-        except ET.ParseError:
-            print("!! failed to parse message, raw body below:")
-            print(frame.body[:500])
-            return
-
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        for from_berth, to_berth, headcode, ts in events:
-            print(f"{now}  headcode={headcode!r:8} {from_berth} -> {to_berth}")
+            parsed_body = json.loads(frame.body)
+            process_td_message(parsed_body)
+        except Exception as e:
+            print(f"Error parsing frame: {e}", file=sys.stderr)
 
     def on_error(self, frame):
-        print("STOMP error:", frame.body, file=sys.stderr)
+        print("\n=== STOMP ERROR RECEIVED FROM BROKER ===")
+        print(f"Headers: {frame.headers}")
+        print(f"Body: {frame.body}")
+        print("=======================================\n")
 
     def on_disconnected(self):
-        print("Disconnected — reconnecting in 5s...")
-        time.sleep(5)
-        connect()
-
-
-conn = None
-
-
-# def connect():
-#     global conn
-#     conn = stomp.Connection([(STOMP_HOST, STOMP_PORT)], heartbeats=(15000, 15000))
-#     conn.set_listener("", TDListener())
-#     conn.connect(NR_USER, NR_PASS, wait=True)
-#     conn.subscribe(destination=TOPIC, id=1, ack="auto")
-#     print(f"Subscribed to {TOPIC}. Watching for berth steps... (Ctrl+C to stop)")
-
-
-def connect():
-    global conn
-    conn = stomp.Connection([(STOMP_HOST, STOMP_PORT)], heartbeats=(15000, 15000))
-    conn.set_ssl(for_hosts=[(STOMP_HOST, STOMP_PORT)])   # <-- add this line
-    conn.set_listener("", TDListener())
-    conn.connect(NR_USER, NR_PASS, wait=True)
-    conn.subscribe(destination=TOPIC, id=1, ack="auto")
-    print(f"Subscribed to {TOPIC}. Watching for berth steps... (Ctrl+C to stop)")
+        print("-> Connection dropped by broker.")
 
 
 if __name__ == "__main__":
-    connect()
     try:
-        while True:
-            time.sleep(1)
+        with open("secrets.json") as f:
+            secrets = json.load(f)
+            if isinstance(secrets, dict):
+                feed_username = secrets["username"]
+                feed_password = secrets["password"]
+            else:
+                feed_username, feed_password = secrets[0], secrets[1]
+    except (FileNotFoundError, KeyError, IndexError):
+        print("Error reading secrets.json")
+        sys.exit(1)
+
+    HOST = "publicdatafeeds.networkrail.co.uk"
+    PORT = 61613
+
+    print(f"Connecting to Network Rail TD Feed ({HOST}:{PORT})...")
+
+    # Disable auto-reconnect loops on connection drop so we see the exact response
+    connection = stomp.Connection12(
+        [(HOST, PORT)],
+        keepalive=True,
+        heartbeats=(5000, 5000)
+    )
+    connection.set_listener("verbose", VerboseListener())
+
+    # Mandatory headers required by Network Rail ActiveMQ
+    connect_headers = {
+        "username": feed_username,
+        "passcode": feed_password,
+        "wait": True,
+        "client-id": feed_username,
+        "host": HOST,
+    }
+
+    try:
+        connection.connect(**connect_headers)
+    except Exception as e:
+        print(f"\nConnect failed: {type(e).__name__} - {e}")
+        sys.exit(1)
+
+    print(f"Subscribing to topic: {TOPIC}")
+    connection.subscribe(destination=TOPIC, id=1, ack="auto")
+    print("Listening for live berth steps... (Press Ctrl+C to stop)\n")
+
+    try:
+        while connection.is_connected():
+            sleep(1)
     except KeyboardInterrupt:
-        print("\nStopping.")
-        if conn:
-            conn.disconnect()
+        print("\nDisconnecting...")
+        connection.disconnect()
