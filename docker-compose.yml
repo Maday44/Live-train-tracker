@@ -20,6 +20,8 @@ services:
     build: ./services/ingest
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - ./secrets.json:/app/secrets.json:ro    # <-- ADD THIS LINE
     depends_on:
       - db
 

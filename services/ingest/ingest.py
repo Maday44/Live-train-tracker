@@ -4,22 +4,42 @@ import time
 from datetime import datetime, timezone
 
 import stomp
-from dotenv import load_dotenv
 from db import get_db, IS_SQLITE
 
-load_dotenv()
+# Load configuration and credentials from secrets.json
+secrets_path = "secrets.json"
+if not os.path.exists(secrets_path):
+    raise SystemExit(f"Configuration file '{secrets_path}' not found. Please create it.")
 
-NR_USER = os.getenv("NR_FEED_USERNAME")
-NR_PASS = os.getenv("NR_FEED_PASSWORD")
-STOMP_HOST = os.getenv("NR_STOMP_HOST", "publicdatafeeds.networkrail.co.uk")
-STOMP_PORT = int(os.getenv("NR_STOMP_PORT", 61618))
-TD_AREA_CODE = os.getenv("TD_AREA_CODE", "Q6")
-TARGET_BERTHS = set(b.strip() for b in os.environ.get("TARGET_BERTHS", "").split(",") if b.strip())
+with open(secrets_path, "r", encoding="utf-8") as f:
+    secrets = json.load(f)
+
+# Allow secrets.json to support both dictionary and list formats
+if isinstance(secrets, dict):
+    NR_USER = secrets.get("username") or secrets.get("NR_FEED_USERNAME")
+    NR_PASS = secrets.get("password") or secrets.get("NR_FEED_PASSWORD")
+    STOMP_HOST = secrets.get("host", "publicdatafeeds.networkrail.co.uk")
+    STOMP_PORT = int(secrets.get("port", 61618))
+    TD_AREA_CODE = secrets.get("area_code", "Q6")
+    raw_berths = secrets.get("target_berths", ["Q60684", "Q60685", "Q60686", "Q60687", "Q60688", "Q60689"])
+else:
+    # Fallback if secrets.json is a list [username, password]
+    NR_USER = secrets[0]
+    NR_PASS = secrets[1]
+    STOMP_HOST = "publicdatafeeds.networkrail.co.uk"
+    STOMP_PORT = 61618
+    TD_AREA_CODE = "Q6"
+    raw_berths = ["Q60684", "Q60685", "Q60686", "Q60687", "Q60688", "Q60689"]
+
+if isinstance(raw_berths, str):
+    TARGET_BERTHS = set(b.strip() for b in raw_berths.split(",") if b.strip())
+else:
+    TARGET_BERTHS = set(str(b).strip() for b in raw_berths)
 
 TOPIC = f"/topic/TD_{TD_AREA_CODE}_SIG_AREA"
 
 if not TARGET_BERTHS:
-    raise SystemExit("TARGET_BERTHS is empty. Please set TARGET_BERTHS in .env.")
+    raise SystemExit("TARGET_BERTHS is empty. Please define 'target_berths' in secrets.json.")
 
 
 def insert_raw_event(headcode, berth, direction, event_time):
@@ -56,7 +76,6 @@ def parse_td_messages(body):
         print(f"[ingest] JSON decode error: {e}", flush=True)
         return results
 
-    # Data can arrive as a single dict or list of dicts
     if isinstance(data, dict):
         data = [data]
 
@@ -99,14 +118,12 @@ def connect():
     global conn
     print(f"[ingest] Connecting to {STOMP_HOST}:{STOMP_PORT}...", flush=True)
     
-    # Initialize standard Connection11 without invalid kwargs
     conn = stomp.Connection11(
         [(STOMP_HOST, STOMP_PORT)],
         heartbeats=(15000, 15000)
     )
     conn.set_listener("", TDListener())
     
-    # Pass client-id in headers during connect call
     conn.connect(
         username=NR_USER,
         password=NR_PASS,
@@ -114,12 +131,10 @@ def connect():
         headers={"client-id": NR_USER}
     )
     
-    # Construct Network Rail TD topic string
     topic = f"/topic/TD_{TD_AREA_CODE}_SIG_ALL_DEMO" if "DEMO" in TOPIC else f"/topic/TD_{TD_AREA_CODE}_SIG_ALL"
     
     conn.subscribe(destination=topic, id="1", ack="auto")
     print(f"[ingest] Subscribed to {topic}, watching berths: {TARGET_BERTHS}", flush=True)
-
 
 
 if __name__ == "__main__":
