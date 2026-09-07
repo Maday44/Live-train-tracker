@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 
 try:
     with open("secrets.json") as f:
-        NR_USER, NR_PASS = json.load(f)
+        NR_FEED_USERNAME, NR_FEED_PASSWORD = json.load(f)
 except FileNotFoundError:
     print("FAIL: secrets.json file not found.")
     sys.exit(1)
@@ -48,7 +48,7 @@ conn.set_ssl(for_hosts=[(STOMP_HOST, STOMP_PORT)])
 conn.set_listener("", TestListener())
 
 try:
-    conn.connect(username=NR_USER, passcode=NR_PASS, wait=True)
+    conn.connect(username=NR_FEED_USERNAME, passcode=NR_FEED_PASSWORD, wait=True)
 except Exception as e:
     print(f"\nFAIL: Could not connect/authenticate: {e}")
     sys.exit(1)

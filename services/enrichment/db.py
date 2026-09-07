@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Read DATABASE_URL from .env or default to sqlite
+
 RAW_DB_URL = os.getenv("DATABASE_URL", "")
 IS_SQLITE = RAW_DB_URL.startswith("sqlite") or not RAW_DB_URL
 SQLITE_FILE = "trainwatch.db"

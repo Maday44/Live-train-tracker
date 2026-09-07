@@ -13,8 +13,9 @@ from pytz import timezone
 
 TIMEZONE_LONDON = timezone("Europe/London")
 
-TARGET_AREAS = []
-TARGET_BERTHS = []
+
+TARGET_AREAS = ["Q6", "MP"]
+TARGET_BERTHS = ["0684", "0685", "0686", "0687", "0688", "0689"]
 
 
 class Listener(stomp.ConnectionListener):
@@ -55,7 +56,7 @@ class Listener(stomp.ConnectionListener):
                             time_str = uk_dt.strftime("%H:%M:%S")
 
                             print("=" * 60)
-                            print(f"🚆 TRAIN  [{time_str}]")
+                            print(f"🚆 TRAIN! [{time_str}]")
                             print(f"   Headcode: {headcode}")
                             print(f"   Area: {area_id} | Movement: Berth {from_berth} ---> Berth {to_berth}")
                             print("=" * 60 + "\n")
