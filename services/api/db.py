@@ -18,7 +18,7 @@ if IS_SQLITE:
         direction TEXT NOT NULL,
         event_time TEXT NOT NULL,
         received_at TEXT NOT NULL,
-        processed BOOLEAN NOT NULL DEFAULT 0
+        processed BOOLEAN NOT NULL DEfFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS passing_events (

@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - ./secrets.json:/app/secrets.json:ro    # <-- ADD THIS LINE
+      - ./secrets.json:/app/secrets.json:ro
     depends_on:
       - db
 
