@@ -15,42 +15,20 @@ services:
       interval: 3s
       timeout: 3s
       retries: 5
-
-  ingest:
-    build: ./services/ingest
-    restart: unless-stopped
-    env_file: .env
-    volumes:
-      - ./secrets.json:/app/secrets.json:ro
-    depends_on:
-      - db
-
-  enrichment:
-    build: ./services/enrichment
-    restart: unless-stopped
-    env_file: .env
-    depends_on:
-      - db
-
-  api:
-    build: ./services/api
-    restart: unless-stopped
-    env_file: .env
-    depends_on:
-      - db
+  
+  flask:
+    build:
+      dockerfile: Dockerfile
+      target: trainwatch-dev
+      args:
+        DB_TRAINWATCH_PASSWORD:
     ports:
-      - "8000:8000"
+      - "5000:5000"
     volumes:
-      - ./web:/web:ro
-
-  alerts:
-    build: ./services/alerts
-    restart: unless-stopped
-    env_file: .env
+      - .:/code
     environment:
-      API_BASE: http://api:8000
-    depends_on:
-      - api
+      FLASK_ENV: development
+  
 
 volumes:
   db_data:
