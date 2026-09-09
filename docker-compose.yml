@@ -1,35 +1,37 @@
 services:
   db:
     image: postgres:16-alpine
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-trainwatch}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trainwatch_secure_pass}
-      POSTGRES_DB: ${POSTGRES_DB:-trainwatch}
+      POSTGRES_USER: trainwatch
+      POSTGRES_PASSWORD: trainwatch_password
+      POSTGRES_DB: trainwatch
     volumes:
       - db_data:/var/lib/postgresql/data
-    expose:
-      - "5432"
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trainwatch} -d ${POSTGRES_DB:-trainwatch}"]
-      interval: 5s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U trainwatch -d trainwatch"]
+      interval: 3s
+      timeout: 3s
       retries: 5
 
   flask:
     build:
       context: .
       dockerfile: Dockerfile
-      target: trainwatch-dev  # Switched from -dev to production target
-    restart: always
+      target: trainwatch-dev
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/code
+    environment:
+      FLASK_ENV: development
+      FLASK_RUN_HOST: 0.0.0.0
+      DATABASE_URL: postgresql://trainwatch:trainwatch_password@db:5432/trainwatch
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "8000:8000"
-    environment:
-      FLASK_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-trainwatch}:${POSTGRES_PASSWORD:-trainwatch_secure_pass}@db:5432/${POSTGRES_DB:-trainwatch}
 
 volumes:
   db_data:

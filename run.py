@@ -1,13 +1,13 @@
 import argparse
 import os
 
-# Set debug before importing app so we get the logging right
+# Set debug before importing app so logging initializes correctly
 os.environ["FLASK_DEBUG"] = "1"
 
-from . import train_tracker  # noqa E402 needs to be after FLASK_DEBUG set
+from train_tracker import app  # noqa E402
 
 
 if "FLASK_RUN_HOST" in os.environ:
-    train_tracker.run(host=os.environ["FLASK_RUN_HOST"])
+    app.run(host=os.environ["FLASK_RUN_HOST"], port=5000)
 else:
-    train_tracker.run()
+    app.run(port=5000)

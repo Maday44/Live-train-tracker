@@ -4,7 +4,8 @@
 import argparse
 import json
 import sys
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime
+from datetime import timezone as dt_timezone
 from time import sleep
 
 # Third party
@@ -26,7 +27,9 @@ class Listener(stomp.ConnectionListener):
         self.is_durable = durable
 
     def on_connected(self, frame):
-        print(f"✓ Connected! Tracking   (Areas {TARGET_AREAS}, Berths {TARGET_BERTHS})...\n")
+        print(
+            f"✓ Connected! Tracking   (Areas {TARGET_AREAS}, Berths {TARGET_BERTHS})...\n"
+        )
 
     def on_message(self, frame):
         headers, message_raw = frame.headers, frame.body
@@ -58,7 +61,9 @@ class Listener(stomp.ConnectionListener):
                             print("=" * 60)
                             print(f"🚆 TRAIN! [{time_str}]")
                             print(f"   Headcode: {headcode}")
-                            print(f"   Area: {area_id} | Movement: Berth {from_berth} ---> Berth {to_berth}")
+                            print(
+                                f"   Area: {area_id} | Movement: Berth {from_berth} ---> Berth {to_berth}"
+                            )
                             print("=" * 60 + "\n")
 
         except Exception as e:
@@ -88,7 +93,9 @@ if __name__ == "__main__":
     HOST = "publicdatafeeds.networkrail.co.uk"
     PORT = 61618
 
-    connection = stomp.Connection12([(HOST, PORT)], keepalive=True, heartbeats=(5000, 5000))
+    connection = stomp.Connection12(
+        [(HOST, PORT)], keepalive=True, heartbeats=(5000, 5000)
+    )
     connection.set_listener("", Listener(connection, durable=args.durable))
 
     connect_headers = {
@@ -105,10 +112,12 @@ if __name__ == "__main__":
 
     subscribe_headers = {"destination": topic, "id": 1}
     if args.durable:
-        subscribe_headers.update({
-            "activemq.subscriptionName": feed_username + topic,
-            "ack": "client-individual",
-        })
+        subscribe_headers.update(
+            {
+                "activemq.subscriptionName": feed_username + topic,
+                "ack": "client-individual",
+            }
+        )
     else:
         subscribe_headers["ack"] = "auto"
 

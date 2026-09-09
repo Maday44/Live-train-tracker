@@ -1,13 +1,15 @@
 from datetime import datetime, timedelta, timezone
-from flask import Blueprint, render_template, jsonify
-from models import db, TrainEvent
 
+from flask import Blueprint, jsonify, render_template
+from train_tracker.models import TrainEvent, db
 
 home = Blueprint("home", __name__)
+
 
 @home.route("/")
 def index():
     return render_template("live_train_tracker_home")
+
 
 @home.route("/events/recent", methods=["GET"])
 def get_recent_events():
