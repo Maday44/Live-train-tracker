@@ -2,205 +2,95 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>trainwatch — Tilbury Town</title>
+  <title>trainwatch &middot; tilbury town</title>
   <style>
     :root {
       --bg: #0a0a0a;
-      --panel: #111311;
       --amber: #ffb000;
       --amber-dim: #7a5a2a;
-      --red: #ff4136;
       --line: #262a26;
     }
-
     * { box-sizing: border-box; }
-
     body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--amber);
+      margin: 0; background: var(--bg); color: var(--amber);
       font-family: "Space Mono", "Courier New", monospace;
-      min-height: 100vh;
       padding: 40px 24px;
     }
-
-    .board {
-      max-width: 760px;
-      margin: 0 auto;
-    }
-
+    .board { max-width: 760px; margin: 0 auto; }
     .board-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      border-bottom: 2px solid var(--amber);
-      padding-bottom: 12px;
-      margin-bottom: 4px;
+      display: flex; justify-content: space-between; align-items: baseline;
+      border-bottom: 2px solid var(--amber); padding-bottom: 12px; margin-bottom: 4px;
     }
-
-    .board-header h1 {
-      font-size: 1.4rem;
-      letter-spacing: 0.08em;
-      margin: 0;
-      text-transform: uppercase;
-    }
-
+    .board-header h1 { font-size: 1.4rem; letter-spacing: 0.08em; margin: 0; text-transform: uppercase; }
     .status-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--amber-dim);
-      display: inline-block;
-      margin-right: 8px;
-      box-shadow: 0 0 6px var(--amber-dim);
+      width: 9px; height: 9px; border-radius: 50%; background: var(--amber);
+      display: inline-block; margin-right: 8px; box-shadow: 0 0 8px var(--amber);
     }
-
-    .status-dot.live {
-      background: var(--amber);
-      box-shadow: 0 0 8px var(--amber);
-    }
-
-    .status-line {
-      font-size: 0.8rem;
-      color: var(--amber-dim);
-    }
-
+    .status-line { font-size: 0.8rem; color: var(--amber-dim); }
     .row-labels {
-      display: grid;
-      grid-template-columns: 100px 120px 1fr 100px;
-      gap: 12px;
-      font-size: 0.7rem;
-      color: var(--amber-dim);
-      padding: 10px 4px;
-      border-bottom: 1px solid var(--line);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      display: grid; grid-template-columns: 100px 120px 1fr 100px; gap: 12px;
+      font-size: 0.7rem; color: var(--amber-dim); padding: 10px 4px;
+      border-bottom: 1px solid var(--line); text-transform: uppercase;
     }
-
-    .events {
-      display: flex;
-      flex-direction: column;
-    }
-
     .event-row {
-      display: grid;
-      grid-template-columns: 100px 120px 1fr 100px;
-      gap: 12px;
-      padding: 14px 4px;
-      border-bottom: 1px solid var(--line);
-      font-size: 1.05rem;
-      letter-spacing: 0.03em;
-      animation: flicker-in 0.4s ease-out;
+      display: grid; grid-template-columns: 100px 120px 1fr 100px; gap: 12px;
+      padding: 14px 4px; border-bottom: 1px solid var(--line); font-size: 1.05rem;
     }
-
-    @keyframes flicker-in {
-      0% { opacity: 0; }
-      30% { opacity: 0.6; }
-      50% { opacity: 0.1; }
-      100% { opacity: 1; }
-    }
-
     .event-row .time { color: var(--amber); }
-    .event-row .headcode { color: var(--amber); text-transform: uppercase; font-weight: bold; }
+    .event-row .headcode { color: var(--amber); font-weight: bold; }
     .event-row .movement { color: var(--amber-dim); }
     .event-row .area { text-align: right; color: var(--amber-dim); }
-
-    .empty {
-      padding: 32px 4px;
-      color: var(--amber-dim);
-      font-size: 0.9rem;
-    }
-
-    footer {
-      margin-top: 28px;
-      font-size: 0.7rem;
-      color: var(--amber-dim);
-      text-align: center;
-    }
+    .empty { padding: 32px 4px; color: var(--amber-dim); font-size: 0.9rem; }
+    footer { margin-top: 28px; font-size: 0.7rem; color: var(--amber-dim); text-align: center; }
   </style>
 </head>
 <body>
-
   <div class="board">
     <div class="board-header">
       <h1>trainwatch &middot; tilbury town</h1>
-      <div class="status-line">
-        <span class="status-dot" id="status-dot"></span>
-        <span id="status-text">connecting</span>
-      </div>
+      <div class="status-line"><span class="status-dot"></span><span>db active (24h history)</span></div>
     </div>
-
     <div class="row-labels">
-      <div>Time</div>
-      <div>Headcode</div>
-      <div>Movement</div>
-      <div style="text-align: right;">Area</div>
+      <div>Time</div><div>Headcode</div><div>Movement</div><div style="text-align: right;">Area</div>
     </div>
-
     <div class="events" id="events">
-      <div class="empty">Waiting for a train to pass...</div>
+      <div class="empty">Loading recent train events...</div>
     </div>
-
-    <footer>Live berth-level tracking &middot; Network Rail TD feed</footer>
+    <footer>Live berth-level tracking &middot; SQLite persistence (auto-purged @ 24h)</footer>
   </div>
 
-<script>
-  const evtSource = new EventSource("/events");
-  const eventsEl = document.getElementById("events");
-  const statusDot = document.getElementById("status-dot");
-  const statusText = document.getElementById("status-text");
+  <script>
+    const eventsEl = document.getElementById("events");
 
-  evtSource.onopen = () => {
-    statusDot.classList.add("live");
-    statusText.textContent = "live";
-  };
+    async function loadRecent() {
+      try {
+        const resp = await fetch("/events/recent");
+        const data = await resp.json();
+        
+        if (data.length === 0) {
+          eventsEl.innerHTML = '<div class="empty">No train activity recorded in the past 24 hours.</div>';
+          return;
+        }
 
-  evtSource.onerror = () => {
-    statusDot.classList.remove("live");
-    statusText.textContent = "reconnecting...";
-  };
-
-  function playAlertSound() {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.start();
-      osc.stop(ctx.currentTime + 0.3);
-    } catch (e) {}
-  }
-
-  function addEvent(data) {
-    const empty = eventsEl.querySelector(".empty");
-    if (empty) empty.remove();
-
-    const row = document.createElement("div");
-    row.className = "event-row";
-
-    row.innerHTML = `
-      <div class="time">${data.time || "--:--:--"}</div>
-      <div class="headcode">${data.train_id || "TRAIN"}</div>
-      <div class="movement">${data.from_berth || "----"} &rarr; ${data.to_berth || "----"}</div>
-      <div class="area">[${data.area || "Q6"}]</div>
-    `;
-
-    eventsEl.prepend(row);
-
-    // Limit maximum rows displayed
-    while (eventsEl.children.length > 30) {
-      eventsEl.removeChild(eventsEl.lastChild);
+        eventsEl.innerHTML = "";
+        data.forEach(ev => {
+          const row = document.createElement("div");
+          row.className = "event-row";
+          row.innerHTML = `
+            <div class="time">${ev.time}</div>
+            <div class="headcode">${ev.headcode}</div>
+            <div class="movement">${ev.from_berth} &rarr; ${ev.to_berth}</div>
+            <div class="area">[${ev.area}]</div>
+          `;
+          eventsEl.appendChild(row);
+        });
+      } catch (e) {
+        console.error("Failed to fetch train events:", e);
+      }
     }
-  }
 
-  evtSource.addEventListener("train_alert", (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === "ALERT") {
-      playAlertSound();
-      addEvent(data);
-    }
-  });
-</script>
+    loadRecent();
+    setInterval(loadRecent, 5000); // Poll database every 5 seconds
+  </script>
 </body>
 </html>

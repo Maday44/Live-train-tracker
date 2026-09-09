@@ -1,0 +1,8 @@
+stages:
+  - lint
+
+include:
+  - project: 'ch/co/gitlab/python-ci'
+    file: 'templates/python-check.yml'
+    inputs:
+      version: "2024-04-29"
