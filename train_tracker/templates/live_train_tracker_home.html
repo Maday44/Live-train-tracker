@@ -67,10 +67,6 @@
         const resp = await fetch("/events/recent");
         const data = await resp.json();
         
-        if (data.length === 0) {
-          eventsEl.innerHTML = '<div class="empty">No train activity recorded in the past 24 hours.</div>';
-          return;
-        }
 
         eventsEl.innerHTML = "";
         data.forEach(ev => {

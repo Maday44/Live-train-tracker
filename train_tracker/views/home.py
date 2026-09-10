@@ -8,7 +8,7 @@ home = Blueprint("home", __name__)
 
 @home.route("/")
 def index():
-    return render_template("live_train_tracker_home")
+    return render_template("live_train_tracker_home.html")
 
 
 @home.route("/events/recent", methods=["GET"])

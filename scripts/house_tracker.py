@@ -16,7 +16,7 @@ TIMEZONE_LONDON = timezone("Europe/London")
 
 
 TARGET_AREAS = ["Q6", "MP"]
-TARGET_BERTHS = ["0684", "0685", "0686", "0687", "0688", "0689"]
+TARGET_BERTHS = ["0684", "0685"]
 
 
 class Listener(stomp.ConnectionListener):

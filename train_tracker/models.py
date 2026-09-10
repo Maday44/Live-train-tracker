@@ -2,8 +2,9 @@ from datetime import datetime, timezone
 
 from flask_sqlalchemy import SQLAlchemy
 
-db = SQLAlchemy()
+from flask_sqlalchemy import SQLAlchemy
 
+db = SQLAlchemy()
 
 class TrainEvent(db.Model):
     __tablename__ = "train_events"

@@ -5,10 +5,10 @@ from datetime import timezone as dt_timezone
 
 import stomp
 from flask import Flask
-from .models import TrainEvent, db
+from .models import TrainEvent
+from train_tracker.models import db
 from pytz import timezone
 import os
-from flask_sqlalchemy import SQLAlchemy
 
 TIMEZONE_LONDON = timezone("Europe/London")
 TARGET_AREAS = ["Q6"]
@@ -22,7 +22,8 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-db = SQLAlchemy(app)
+
+db.init_app(app) 
 
 with app.app_context():
     db.create_all()
