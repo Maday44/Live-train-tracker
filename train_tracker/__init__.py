@@ -9,6 +9,8 @@ from .models import TrainEvent
 from train_tracker.models import db
 from pytz import timezone
 import os
+from flask_migrate import Migrate
+
 
 TIMEZONE_LONDON = timezone("Europe/London")
 TARGET_AREAS = ["Q6"]
@@ -16,6 +18,7 @@ TARGET_BERTHS = ["0684", "0685"]
 
 
 app = Flask(__name__)
+migrate = Migrate(app, db)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
     "DATABASE_URL", 
     "postgresql://trainwatch:trainwatch_password@db:5432/trainwatch"
@@ -26,6 +29,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app) 
 
 with app.app_context():
+
     db.create_all()
 
 class StompListener(stomp.ConnectionListener):
