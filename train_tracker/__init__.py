@@ -31,6 +31,15 @@ with app.app_context():
 class StompListener(stomp.ConnectionListener):
     def __init__(self, flask_app):
         self.app = flask_app
+    """
+    [RECEIVED CA_MSG]
+  msg_type: CA
+  area_id: NX
+  time: 1789058323000
+  from: 0218
+  to: 0216
+  descr: 9H47
+    """
 
     def on_message(self, frame):
         try:
@@ -46,6 +55,7 @@ class StompListener(stomp.ConnectionListener):
                     if area_id in TARGET_AREAS and (
                         from_berth in TARGET_BERTHS or to_berth in TARGET_BERTHS
                     ):
+                        # time come in long int like 1789058323000 need to converted to uk time
                         ts = int(msg.get("time", 0)) / 1000
                         utc_dt = datetime.fromtimestamp(ts, dt_timezone.utc)
 
@@ -61,7 +71,7 @@ class StompListener(stomp.ConnectionListener):
                             db.session.add(event)
                             db.session.commit()
                         print(
-                            f"🚆 SAVED: {headcode} [{area_id}] {from_berth} ---> {to_berth}"
+                            f"SAVED: {headcode} [{area_id}] {from_berth} ---> {to_berth}"
                         )
         except Exception as e:
             print(f"STOMP error: {e}")

@@ -8,14 +8,13 @@ from datetime import datetime
 from datetime import timezone as dt_timezone
 from time import sleep
 
-# Third party
 import stomp
 from pytz import timezone
 
 TIMEZONE_LONDON = timezone("Europe/London")
 
-
-TARGET_AREAS = ["Q6", "MP"]
+# change for your area or areas you will liek to track
+TARGET_AREAS = ["Q6"]
 TARGET_BERTHS = ["0684", "0685"]
 
 
@@ -26,9 +25,9 @@ class Listener(stomp.ConnectionListener):
         self._mq = mq
         self.is_durable = durable
 
-    def on_connected(self, frame):
+    def on_connected():
         print(
-            f"✓ Connected! Tracking   (Areas {TARGET_AREAS}, Berths {TARGET_BERTHS})...\n"
+            f"Now connected. Tracking   (Areas {TARGET_AREAS}, Berths {TARGET_BERTHS})...\n"
         )
 
     def on_message(self, frame):
@@ -38,8 +37,8 @@ class Listener(stomp.ConnectionListener):
             self._mq.ack(id=headers["message-id"], subscription=headers["subscription"])
 
         try:
-            parsed_body = json.loads(message_raw)
-            for outer in parsed_body:
+            message_body = json.loads(message_raw)
+            for outer in message_body:
                 msg = list(outer.values())[0]
                 msg_type = msg.get("msg_type")
 
@@ -59,12 +58,12 @@ class Listener(stomp.ConnectionListener):
                             time_str = uk_dt.strftime("%H:%M:%S")
 
                             print("=" * 60)
-                            print(f"🚆 TRAIN! [{time_str}]")
+                            print(f"TRAIN! [{time_str}]")
                             print(f"   Headcode: {headcode}")
                             print(
                                 f"   Area: {area_id} | Movement: Berth {from_berth} ---> Berth {to_berth}"
                             )
-                            print("=" * 60 + "\n")
+                            print("-" * 60 + "\n")
 
         except Exception as e:
             print(f"Parsing error: {e}", file=sys.stderr)
@@ -79,8 +78,8 @@ class Listener(stomp.ConnectionListener):
 if __name__ == "__main__":
     with open("secrets.json") as f:
         secrets = json.load(f)
-        feed_username = secrets["username"] if isinstance(secrets, dict) else secrets[0]
-        feed_password = secrets["password"] if isinstance(secrets, dict) else secrets[1]
+        feed_username = secrets["username"]
+        feed_password = secrets["password"]
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--durable", action="store_true")
@@ -90,8 +89,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    HOST = "publicdatafeeds.networkrail.co.uk"
-    PORT = 61618
+    HOST = secrets["host"]
+    PORT = secrets["port"]
 
     connection = stomp.Connection12(
         [(HOST, PORT)], keepalive=True, heartbeats=(5000, 5000)

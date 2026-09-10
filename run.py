@@ -1,7 +1,7 @@
 import argparse
 import os
 
-# Set debug before importing app so logging initializes correctly
+# Set debug level has 0 run on in production
 os.environ["FLASK_DEBUG"] = "1"
 
 from train_tracker import app  # noqa E402
