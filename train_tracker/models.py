@@ -37,7 +37,7 @@ class TrainEvent(db.Model):
         }
 
 
-class Berth(db.Model):
+class BerthMap(db.Model):
     """Maps signaling area + berth ID to human-readable station names."""
 
     __tablename__ = "berth_maps"
