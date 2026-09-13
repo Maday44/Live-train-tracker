@@ -5,20 +5,18 @@
     --line: #262a26;
 }
 
-* {
-    box-sizing: border-box;
+body {
+    background-color: var(--bg) !important;
+    color: var(--amber) !important;
+    font-family: "Space Mono", "Courier New", monospace;
 }
 
-body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--amber);
-    font-family: "Space Mono", "Courier New", monospace;
-    padding: 40px 24px;
+.navbar {
+    border-bottom: 2px solid var(--amber);
 }
 
 .board {
-    max-width: 760px;
+    max-width: 850px;
     margin: 0 auto;
 }
 
@@ -48,20 +46,16 @@ body {
     box-shadow: 0 0 8px var(--amber);
 }
 
-.status-line {
-    font-size: 0.8rem;
-    color: var(--amber-dim);
-}
-
 .row-labels {
     display: grid;
     grid-template-columns: 100px 120px 1fr 100px;
     gap: 12px;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: var(--amber-dim);
     padding: 10px 4px;
     border-bottom: 1px solid var(--line);
     text-transform: uppercase;
+    font-weight: bold;
 }
 
 .event-row {
@@ -73,28 +67,26 @@ body {
     font-size: 1.05rem;
 }
 
-.event-row .time {
-    color: var(--amber);
-}
-
+.event-row .time,
 .event-row .headcode {
     color: var(--amber);
     font-weight: bold;
 }
 
-.event-row .movement {
+.event-row .movement,
+.event-row .area {
     color: var(--amber-dim);
 }
 
 .event-row .area {
     text-align: right;
-    color: var(--amber-dim);
 }
 
 .empty {
     padding: 32px 4px;
     color: var(--amber-dim);
     font-size: 0.9rem;
+    text-align: center;
 }
 
 footer {

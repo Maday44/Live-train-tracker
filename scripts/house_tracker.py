@@ -44,10 +44,10 @@ class Listener(stomp.ConnectionListener):
 
                 # CA = Berth Step, CB = Cancel, CC = Interpose
                 if msg_type in ["CA", "CB", "CC"]:
-                    area_id = msg.get("area_id", "")
-                    from_berth = msg.get("from", "")
-                    to_berth = msg.get("to", "")
-                    headcode = msg.get("descr", "")
+                    area_id = msg.get("area_id", "").strip()
+                    from_berth = msg.get("from", "").strip()
+                    to_berth = msg.get("to", "").strip()
+                    headcode = msg.get("descr", "").strip()
 
                     # Check if movement matches our target areas & berths
                     if area_id in TARGET_AREAS:
