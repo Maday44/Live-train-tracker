@@ -36,7 +36,7 @@ class StompListener(stomp.ConnectionListener):
     def __init__(self, flask_app):
         self.app = flask_app
     """
-    [RECEIVED CA_MSG]
+[RECEIVED CA_MSG]
   msg_type: CA
   area_id: NX
   time: 1789058323000

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block body %}
+
+<head>
+  <meta charset="UTF-8">
+  <title>Trainwatch - Tilbury town</title>
+
+</head>
+<body>
+  <div class="board">
+    <div class="board-header">
+      <h1>trainwatch &middot; tilbury town</h1>
+      <div class="status-line"><span class="status-dot"></span><span>ACTIVE</span></div>
+    </div>
+    <div class="row-labels">
+      <div>Time</div><div>Headcode</div><div>Movement</div><div style="text-align: right;">Area</div>
+    </div>
+    <div class="events" id="events">
+      <div class="empty">Loading recent train events...</div>
+    </div>
+    <footer>Live berth-level tracking &middot; SQLite persistence (auto-purged @ 24h)</footer>
+  </div>
+
+</body>
+{% endblock %}

@@ -8,7 +8,7 @@ home = Blueprint("home", __name__)
 
 @home.route("/")
 def index():
-    return render_template("live_train_tracker_home.html")
+    return render_template("home/live_train_tracker_home.html")
 
 
 # json of the train data
