@@ -15,7 +15,10 @@ TIMEZONE_LONDON = timezone("Europe/London")
 
 # change for your area or areas you will liek to track
 TARGET_AREAS = ["Q6"]
-TARGET_BERTHS = ["0684", "0685"]
+# Theres are the beths near me where I can hear them
+TARGET_BERTHS = ["0692","0693"]
+# here platform 1 from 692
+
 
 
 class Listener(stomp.ConnectionListener):
@@ -25,7 +28,7 @@ class Listener(stomp.ConnectionListener):
         self._mq = mq
         self.is_durable = durable
 
-    def on_connected():
+    def on_connected(self, *args):
         print(
             f"Now connected. Tracking   (Areas {TARGET_AREAS}, Berths {TARGET_BERTHS})...\n"
         )
@@ -78,8 +81,8 @@ class Listener(stomp.ConnectionListener):
 if __name__ == "__main__":
     with open("secrets.json") as f:
         secrets = json.load(f)
-        feed_username = secrets["username"]
-        feed_password = secrets["password"]
+        feed_username = secrets[0]
+        feed_password = secrets[1]
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--durable", action="store_true")
@@ -89,11 +92,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    HOST = secrets["host"]
-    PORT = secrets["port"]
+    HOST = "publicdatafeeds.networkrail.co.uk"
+    PORT = 61618
 
     connection = stomp.Connection12(
-        [(HOST, PORT)], keepalive=True, heartbeats=(5000, 5000)
+        [(HOST, PORT)], keepalive=True, heartbeats=(15000, 15000)
     )
     connection.set_listener("", Listener(connection, durable=args.durable))
 

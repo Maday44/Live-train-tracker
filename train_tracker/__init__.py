@@ -7,27 +7,21 @@ from datetime import timezone as dt_timezone
 from flask import Flask
 from flask_migrate import Migrate
 import stomp
-from pytz import timezone
-
 from train_tracker.models import *
 
-# TIMEZONE = timezone("Europe/London")
 
 # All the information you want for the app to be 
-with open("delete.json") as f:
-    delete = json.load(f)
-    username = delete["username"]
-    password = delete["password"]
-    host = delete["host"]
-    port = delete["port"]
-    target_berths = delete["target_berths"]
-    area_code = delete["area_code"]
-
+with open("secrets.json") as f:
+    secrets = json.load(f)
+    username = secrets["username"]
+    password = secrets["password"]
+    host = secrets["host"]
+    port = secrets["port"]
+    target_berths = secrets["target_berths"]
+    area_code = secrets["area_code"]
 
 
 TARGET_AREA = area_code
-
-
 TARGET_BERTHS = target_berths
 """
 looking via this url: https://www.opentraintimes.com/maps/signalling/ 
