@@ -76,7 +76,7 @@ class StompListener(stomp.ConnectionListener):
                     if area_match and berth_match:
                         ts = int(msg.get("time", 0)) / 1000
                         utc_dt = datetime.fromtimestamp(ts, dt_timezone.utc)
-                        uk_dt = utc_dt.astimezone(TIMEZONE_LONDON)
+                        # uk_dt = utc_dt.astimezone(TIMEZONE_LONDON)
 
                         with self.app.app_context():
                             from_map = BerthMap.query.filter_by(
@@ -104,13 +104,13 @@ class StompListener(stomp.ConnectionListener):
                                 to_berth=to_berth,
                                 from_station_name=from_station,
                                 to_station_name=to_station,
-                                timestamp=uk_dt, # UK time 
+                                timestamp=utc_dt, # UK time 
                             )
                             db.session.add(event)
                             db.session.commit()
                         # debug message
                         print(
-                            f"Time {uk_dt} : [SAVED {msg_type}] Headcode: {headcode} | Area: {area_id} | "
+                            f"Time {utc_dt} : [SAVED {msg_type}] Headcode: {headcode} | Area: {area_id} | "
                             f"{from_station} ({from_berth}) ---> {to_station} ({to_berth})",
                             flush=True,
                         )

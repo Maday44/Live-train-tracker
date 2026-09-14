@@ -19,24 +19,31 @@ document.addEventListener("DOMContentLoaded", () => {
                 const fromLoc = ev.from_station || (ev.from_berth ? `Berth ${ev.from_berth}` : "N/A");
                 const toLoc = ev.to_station || (ev.to_berth ? `Berth ${ev.to_berth}` : "N/A");
 
-                // Parse the timestamp into a Date object (handles ISO strings or epoch timestamps)
-                const dateObj = new Date(ev.timestamp || ev.time);
+                // Ensure date string ends with 'Z' so JavaScript explicitly treats it as UTC
+                let rawTimestamp = ev.timestamp;
+                if (rawTimestamp && !rawTimestamp.endsWith("Z") && !rawTimestamp.includes("+")) {
+                    rawTimestamp += "Z";
+                }
+
+                const dateObj = new Date(rawTimestamp);
                 
-                // Format to UK local time (automatically handles GMT vs BST)
-                const formattedTime = isNaN(dateObj) 
-                    ? (ev.time || ev.timestamp) // Fallback if backend sent a plain pre-formatted string
-                    : dateObj.toLocaleTimeString("en-GB", {
+                // Format directly into UK local time (GMT/BST handled automatically)
+                const formattedTime = !isNaN(dateObj.getTime())
+                    ? dateObj.toLocaleTimeString("en-GB", {
                         hour: "2-digit",
                         minute: "2-digit",
                         second: "2-digit",
                         timeZone: "Europe/London"
-                    });
+                    })
+                    : (ev.time || "N/A");
 
                 const row = document.createElement("div");
                 row.className = "event-row";
                 row.style.cursor = "pointer";
                 
-                row.onclick = () => showTrainDetails(ev.headcode);
+                if (typeof showTrainDetails === "function") {
+                    row.onclick = () => showTrainDetails(ev.headcode);
+                }
 
                 row.innerHTML = `
                     <div class="time">${formattedTime}</div>

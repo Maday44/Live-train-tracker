@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 
+
 class TrainEvent(db.Model):
     __tablename__ = "train_events"
 
@@ -17,9 +18,28 @@ class TrainEvent(db.Model):
     to_station_name = db.Column(db.String(100), nullable=True)
     # Link to cached Realtime Trains journey info
     rtt_service_uid = db.Column(db.String(20), nullable=True)
-    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    timestamp = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
 
     def to_dict(self):
+        # 1. Ensure timestamp is treated as UTC and exported with explicit 'Z'
+        if self.timestamp:
+            utc_dt = (
+                self.timestamp.replace(tzinfo=timezone.utc)
+                if self.timestamp.tzinfo is None
+                else self.timestamp.astimezone(timezone.utc)
+            )
+            iso_timestamp = utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+            time_str = utc_dt.strftime("%H:%M:%S")
+            date_str = utc_dt.strftime("%Y-%m-%d")
+        else:
+            iso_timestamp = None
+            time_str = "N/A"
+            date_str = ""
+
         return {
             "id": self.id,
             "headcode": self.headcode,
@@ -30,11 +50,10 @@ class TrainEvent(db.Model):
             "from_station": self.from_station_name,
             "to_station": self.to_station_name,
             "rtt_service_uid": self.rtt_service_uid,
-            "time": self.timestamp.strftime("%H:%M:%S"),
-            "date": self.timestamp.strftime("%Y-%m-%d"),
+            "time": time_str,
+            "date": date_str,
+            "timestamp": iso_timestamp,  # <-- Adds UTC ISO string for JS parsing
         }
-
-
 class BerthMap(db.Model):
     """Maps signaling area + berth ID to human-readable station names."""
 
