@@ -85,11 +85,6 @@ if __name__ == "__main__":
         feed_password = secrets[1]
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--durable", action="store_true")
-    action = parser.add_mutually_exclusive_group(required=False)
-    action.add_argument("--td", action="store_true", default=True)
-    action.add_argument("--trust", action="store_true")
-
     args = parser.parse_args()
 
     HOST = "publicdatafeeds.networkrail.co.uk"

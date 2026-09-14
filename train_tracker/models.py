@@ -17,9 +17,7 @@ class TrainEvent(db.Model):
     to_station_name = db.Column(db.String(100), nullable=True)
     # Link to cached Realtime Trains journey info
     rtt_service_uid = db.Column(db.String(20), nullable=True)
-    timestamp = db.Column(
-        db.DateTime, default=lambda: datetime.now(timezone.utc), index=True
-    )
+    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
 
     def to_dict(self):
         return {
@@ -29,8 +27,8 @@ class TrainEvent(db.Model):
             "area": self.area,
             "from_berth": self.from_berth,
             "to_berth": self.to_berth,
-            "from_station": self.from_station_name or self.from_berth,
-            "to_station": self.to_station_name or self.to_berth,
+            "from_station": self.from_station_name,
+            "to_station": self.to_station_name,
             "rtt_service_uid": self.rtt_service_uid,
             "time": self.timestamp.strftime("%H:%M:%S"),
             "date": self.timestamp.strftime("%Y-%m-%d"),

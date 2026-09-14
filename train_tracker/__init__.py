@@ -7,27 +7,25 @@ from datetime import timezone as dt_timezone
 from flask import Flask
 from flask_migrate import Migrate
 import stomp
-from train_tracker.models import *
+from train_tracker.models import db, TrainEvent, BerthMap
+from pytz import timezone
 
+TIMEZONE_LONDON = timezone("Europe/London")
 
-# All the information you want for the app to be 
+# Load config secrets
 with open("secrets.json") as f:
     secrets = json.load(f)
     username = secrets["username"]
     password = secrets["password"]
     host = secrets["host"]
     port = secrets["port"]
-    target_berths = secrets["target_berths"]
-    area_code = secrets["area_code"]
+    target_berths = secrets.get("target_berths", [])
+    area_code = secrets.get("area_code", "")
 
 
-TARGET_AREA = area_code
+TARGET_AREAS = [area_code] if isinstance(area_code, str) else area_code
 TARGET_BERTHS = target_berths
-"""
-looking via this url: https://www.opentraintimes.com/maps/signalling/ 
-you can find the numbers assciate with a particular
-railway station. depending on the platforms add the platform you wnat information about 
-"""
+
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
     "DATABASE_URL",
@@ -45,6 +43,7 @@ with app.app_context():
 class StompListener(stomp.ConnectionListener):
     def __init__(self, flask_app):
         self.app = flask_app
+        self.last_event = None
 
     def on_message(self, message):
         try:
@@ -52,15 +51,22 @@ class StompListener(stomp.ConnectionListener):
             for outer in parsed_body:
                 msg = list(outer.values())[0]
                 msg_type = msg.get("msg_type", "")
-
+                # message code are: 
                 if msg_type in ["CA", "CB", "CC"]:
-                    area_id = msg.get("area_id", "")
-                    from_berth = msg.get("from", "")
-                    to_berth = msg.get("to", "")
-                    headcode = msg.get("descr", "TRAIN")
+                    area_id = msg.get("area_id", "").strip()
+                    from_berth = msg.get("from", "").strip()
+                    to_berth = msg.get("to", "").strip()
+                    headcode = msg.get("descr", "").strip()
+                    event_time = msg.get("time", 0)
 
+                    event_key = f"{headcode}:{area_id}:{from_berth}:{to_berth}:{event_time}"
 
-                    area_match = area_id in TARGET_AREA
+                    # Skip duplicate processing
+                    if event_key == self.last_event:
+                        continue
+                    self.last_event = event_key
+
+                    area_match = area_id in TARGET_AREAS
                     berth_match = (
                         not TARGET_BERTHS
                         or from_berth in TARGET_BERTHS
@@ -70,6 +76,7 @@ class StompListener(stomp.ConnectionListener):
                     if area_match and berth_match:
                         ts = int(msg.get("time", 0)) / 1000
                         utc_dt = datetime.fromtimestamp(ts, dt_timezone.utc)
+                        uk_dt = utc_dt.astimezone(TIMEZONE_LONDON)
 
                         with self.app.app_context():
                             from_map = BerthMap.query.filter_by(
@@ -89,7 +96,6 @@ class StompListener(stomp.ConnectionListener):
                                 if to_map
                                 else f"Berth {to_berth}"
                             )
-
                             event = TrainEvent(
                                 headcode=headcode,
                                 msg_type=msg_type,
@@ -98,18 +104,18 @@ class StompListener(stomp.ConnectionListener):
                                 to_berth=to_berth,
                                 from_station_name=from_station,
                                 to_station_name=to_station,
-                                timestamp=utc_dt,
+                                timestamp=uk_dt, # UK time 
                             )
                             db.session.add(event)
                             db.session.commit()
-
+                        # debug message
                         print(
-                            f"[SAVED {msg_type}] Headcode: {headcode} | Area: {area_id} | "
+                            f"Time {uk_dt} : [SAVED {msg_type}] Headcode: {headcode} | Area: {area_id} | "
                             f"{from_station} ({from_berth}) ---> {to_station} ({to_berth})",
                             flush=True,
                         )
         except Exception as e:
-            print(f"STOMP Error: {e}", flush=True)
+            print(f"STOMP Parsing Error: {e}", flush=True)
 
 
 def start_stomp(flask_app):
@@ -122,12 +128,16 @@ def start_stomp(flask_app):
         conn.set_listener("train_listener", StompListener(flask_app))
         conn.connect(username=username, passcode=password, wait=True)
         conn.subscribe(destination="/topic/TD_ALL_SIG_AREA", id=1, ack="auto")
-        print("STOMP Listener successfully", flush=True)
+        # if connected get email alerts
+        print("STOMP Listener successfully connected to /topic/TD_ALL_SIG_AREA", flush=True)
+        # get email alets and loop to try again 5 times
     except Exception as err:
         print(f"STOMP Connection Failed: {err}", flush=True)
 
-
-threading.Thread(target=start_stomp, args=(app,), daemon=True).start()
+# makes sure that 
+if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+    threading.Thread(target=start_stomp, args=(app,), daemon=True).start()
+    print("STOMP Listener thread started.", flush=True)
 
 from train_tracker.views.home import home  # noqa E402
 

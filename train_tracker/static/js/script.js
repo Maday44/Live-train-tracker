@@ -16,14 +16,30 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             data.forEach(ev => {
-                // Handle fallback if station names are missing or empty
                 const fromLoc = ev.from_station || (ev.from_berth ? `Berth ${ev.from_berth}` : "N/A");
                 const toLoc = ev.to_station || (ev.to_berth ? `Berth ${ev.to_berth}` : "N/A");
 
+                // Parse the timestamp into a Date object (handles ISO strings or epoch timestamps)
+                const dateObj = new Date(ev.timestamp || ev.time);
+                
+                // Format to UK local time (automatically handles GMT vs BST)
+                const formattedTime = isNaN(dateObj) 
+                    ? (ev.time || ev.timestamp) // Fallback if backend sent a plain pre-formatted string
+                    : dateObj.toLocaleTimeString("en-GB", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        timeZone: "Europe/London"
+                    });
+
                 const row = document.createElement("div");
                 row.className = "event-row";
+                row.style.cursor = "pointer";
+                
+                row.onclick = () => showTrainDetails(ev.headcode);
+
                 row.innerHTML = `
-                    <div class="time">${ev.time}</div>
+                    <div class="time">${formattedTime}</div>
                     <div class="headcode">${ev.headcode}</div>
                     <div class="movement">${fromLoc} &rarr; ${toLoc}</div>
                     <div class="area">[${ev.area}]</div>
