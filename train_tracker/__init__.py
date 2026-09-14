@@ -9,6 +9,7 @@ from flask_migrate import Migrate
 import stomp
 from train_tracker.models import db, TrainEvent, BerthMap
 from pytz import timezone
+import time
 
 TIMEZONE_LONDON = timezone("Europe/London")
 
@@ -41,9 +42,17 @@ with app.app_context():
 
 
 class StompListener(stomp.ConnectionListener):
-    def __init__(self, flask_app):
+
+    def __init__(self, flask_app, connection=None):
         self.app = flask_app
+        self.conn = connection
         self.last_event = None
+
+    def on_disconnected(self):
+        print("STOMP disconnected! Triggering auto-reconnect...", flush=True)
+
+    def on_error(self, frame):
+        print(f"STOMP Protocol Error: {frame.body}", flush=True)
 
     def on_message(self, message):
         try:
@@ -76,7 +85,7 @@ class StompListener(stomp.ConnectionListener):
                     if area_match and berth_match:
                         ts = int(msg.get("time", 0)) / 1000
                         utc_dt = datetime.fromtimestamp(ts, dt_timezone.utc)
-                        # uk_dt = utc_dt.astimezone(TIMEZONE_LONDON)
+                        uk_dt = utc_dt.astimezone(TIMEZONE_LONDON)
 
                         with self.app.app_context():
                             from_map = BerthMap.query.filter_by(
@@ -104,13 +113,15 @@ class StompListener(stomp.ConnectionListener):
                                 to_berth=to_berth,
                                 from_station_name=from_station,
                                 to_station_name=to_station,
-                                timestamp=utc_dt, # UK time 
+                                # timestamp=utc_dt, # UK time uk_d
+                                timestamp= uk_dt, # UK time uk_d
+
                             )
                             db.session.add(event)
                             db.session.commit()
                         # debug message
                         print(
-                            f"Time {utc_dt} : [SAVED {msg_type}] Headcode: {headcode} | Area: {area_id} | "
+                            f"Time {uk_dt} : [SAVED {msg_type}] Headcode: {headcode} | Area: {area_id} | "
                             f"{from_station} ({from_berth}) ---> {to_station} ({to_berth})",
                             flush=True,
                         )
@@ -119,20 +130,29 @@ class StompListener(stomp.ConnectionListener):
 
 
 def start_stomp(flask_app):
-    try:
-        conn = stomp.Connection12(
-            [(host, port)],
-            keepalive=True,
-            heartbeats=(15000, 15000),
-        )
-        conn.set_listener("train_listener", StompListener(flask_app))
-        conn.connect(username=username, passcode=password, wait=True)
-        conn.subscribe(destination="/topic/TD_ALL_SIG_AREA", id=1, ack="auto")
-        # if connected get email alerts
-        print("STOMP Listener successfully connected to /topic/TD_ALL_SIG_AREA", flush=True)
-        # get email alets and loop to try again 5 times
-    except Exception as err:
-        print(f"STOMP Connection Failed: {err}", flush=True)
+    """Maintains a resilient background connection to Network Rail with auto-retry."""
+    while True:
+        try:
+            print("Connecting to Network Rail STOMP feed...", flush=True)
+            conn = stomp.Connection12(
+                [(host, port)],
+                keepalive=True,
+                heartbeats=(15000, 15000),  # 15s 
+            )
+
+            listener = StompListener(flask_app, connection=conn)
+            conn.set_listener("train_listener", listener)
+            
+            conn.connect(username=username, passcode=password, wait=True)
+            conn.subscribe(destination="/topic/TD_ALL_SIG_AREA", id=1, ack="auto")
+            print("STOMP Listener successfully connected to /topic/TD_ALL_SIG_AREA", flush=True)
+
+            while conn.is_connected():
+                time.sleep(1)
+
+        except Exception as err:
+            print(f"STOMP Connection dropped/failed: {err}. Retrying in 10s...", flush=True)
+            time.sleep(10)
 
 # makes sure that 
 if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":

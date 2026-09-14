@@ -4,7 +4,6 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 
-
 class TrainEvent(db.Model):
     __tablename__ = "train_events"
 
@@ -25,7 +24,7 @@ class TrainEvent(db.Model):
     )
 
     def to_dict(self):
-        # 1. Ensure timestamp is treated as UTC and exported with explicit 'Z'
+        # timestamp is treated as UTC and exported with explicit 'Z'
         if self.timestamp:
             utc_dt = (
                 self.timestamp.replace(tzinfo=timezone.utc)
@@ -52,7 +51,7 @@ class TrainEvent(db.Model):
             "rtt_service_uid": self.rtt_service_uid,
             "time": time_str,
             "date": date_str,
-            "timestamp": iso_timestamp,  # <-- Adds UTC ISO string for JS parsing
+            "timestamp": iso_timestamp,
         }
 class BerthMap(db.Model):
     """Maps signaling area + berth ID to human-readable station names."""

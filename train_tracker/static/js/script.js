@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const dateObj = new Date(rawTimestamp);
                 
-                // Format directly into UK local time (GMT/BST handled automatically)
+                // British local time
                 const formattedTime = !isNaN(dateObj.getTime())
                     ? dateObj.toLocaleTimeString("en-GB", {
                         hour: "2-digit",
