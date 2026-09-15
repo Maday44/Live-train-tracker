@@ -10,6 +10,7 @@ import stomp
 from train_tracker.models import db, TrainEvent, BerthMap
 from pytz import timezone
 import time
+from .utils.rtt import fetch_rtt_service
 
 TIMEZONE_LONDON = timezone("Europe/London")
 
@@ -60,7 +61,7 @@ class StompListener(stomp.ConnectionListener):
             for outer in parsed_body:
                 msg = list(outer.values())[0]
                 msg_type = msg.get("msg_type", "")
-                # message code are: 
+                # message code are:
                 if msg_type in ["CA", "CB", "CC"]:
                     area_id = msg.get("area_id", "").strip()
                     from_berth = msg.get("from", "").strip()
@@ -68,7 +69,9 @@ class StompListener(stomp.ConnectionListener):
                     headcode = msg.get("descr", "").strip()
                     event_time = msg.get("time", 0)
 
-                    event_key = f"{headcode}:{area_id}:{from_berth}:{to_berth}:{event_time}"
+                    event_key = (
+                        f"{headcode}:{area_id}:{from_berth}:{to_berth}:{event_time}"
+                    )
 
                     # Skip duplicate processing
                     if event_key == self.last_event:
@@ -101,10 +104,18 @@ class StompListener(stomp.ConnectionListener):
                                 else f"Berth {from_berth}"
                             )
                             to_station = (
-                                to_map.station_name
-                                if to_map
-                                else f"Berth {to_berth}"
+                                to_map.station_name if to_map else f"Berth {to_berth}"
                             )
+
+                            rtt_info = fetch_rtt_service.fetch_rtt_service(
+                                headcode, date_str="2026/09/15"
+                            )
+                            service_uid = (
+                                rtt_info["rtt_service_uid"] if rtt_info else None
+                            )
+                            origin = rtt_info["origin"] if rtt_info else None
+                            destination = rtt_info["destination"] if rtt_info else None
+
                             event = TrainEvent(
                                 headcode=headcode,
                                 msg_type=msg_type,
@@ -113,9 +124,10 @@ class StompListener(stomp.ConnectionListener):
                                 to_berth=to_berth,
                                 from_station_name=from_station,
                                 to_station_name=to_station,
-                                # timestamp=utc_dt, # UK time uk_d
-                                timestamp= uk_dt, # UK time uk_d
-
+                                rtt_service_uid=service_uid,  # e.g., 'G34120'
+                                origin_station=origin,  # e.g., 'London Liverpool Street'
+                                destination_station=destination,  # e.g., 'Southend Victoria'
+                                timestamp=uk_dt,  # UK time uk_d
                             )
                             db.session.add(event)
                             db.session.commit()
@@ -137,24 +149,31 @@ def start_stomp(flask_app):
             conn = stomp.Connection12(
                 [(host, port)],
                 keepalive=True,
-                heartbeats=(15000, 15000),  # 15s 
+                heartbeats=(15000, 15000),  # 15s
             )
 
             listener = StompListener(flask_app, connection=conn)
             conn.set_listener("train_listener", listener)
-            
+
             conn.connect(username=username, passcode=password, wait=True)
             conn.subscribe(destination="/topic/TD_ALL_SIG_AREA", id=1, ack="auto")
-            print("STOMP Listener successfully connected to /topic/TD_ALL_SIG_AREA", flush=True)
+            print(
+                "STOMP Listener successfully connected to /topic/TD_ALL_SIG_AREA",
+                flush=True,
+            )
 
             while conn.is_connected():
                 time.sleep(1)
 
         except Exception as err:
-            print(f"STOMP Connection dropped/failed: {err}. Retrying in 10s...", flush=True)
+            print(
+                f"STOMP Connection dropped/failed: {err}. Retrying in 10s...",
+                flush=True,
+            )
             time.sleep(10)
 
-# makes sure that 
+
+# makes sure that
 if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
     threading.Thread(target=start_stomp, args=(app,), daemon=True).start()
     print("STOMP Listener thread started.", flush=True)

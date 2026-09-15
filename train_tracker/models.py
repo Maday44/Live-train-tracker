@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
+from zoneinfo import ZoneInfo
 
+UK_TZ = ZoneInfo("Europe/London")
 db = SQLAlchemy()
 
 
@@ -15,8 +17,9 @@ class TrainEvent(db.Model):
     to_berth = db.Column(db.String(10), nullable=False)
     from_station_name = db.Column(db.String(100), nullable=True)
     to_station_name = db.Column(db.String(100), nullable=True)
-    # Link to cached Realtime Trains journey info
     rtt_service_uid = db.Column(db.String(20), nullable=True)
+    origin_station = db.Column(db.String(100), nullable=True)
+    destination_station = db.Column(db.String(100), nullable=True)
     timestamp = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -24,20 +27,17 @@ class TrainEvent(db.Model):
     )
 
     def to_dict(self):
-        # timestamp is treated as UTC and exported with explicit 'Z'
-        if self.timestamp:
-            utc_dt = (
-                self.timestamp.replace(tzinfo=timezone.utc)
-                if self.timestamp.tzinfo is None
-                else self.timestamp.astimezone(timezone.utc)
-            )
-            iso_timestamp = utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-            time_str = utc_dt.strftime("%H:%M:%S")
-            date_str = utc_dt.strftime("%Y-%m-%d")
-        else:
-            iso_timestamp = None
-            time_str = "N/A"
-            date_str = ""
+        utc_dt = (
+            self.timestamp.replace(tzinfo=timezone.utc)
+            if self.timestamp.tzinfo is None
+            else self.timestamp.astimezone(timezone.utc)
+        )
+
+        uk_dt = utc_dt.astimezone(UK_TZ)
+
+        iso_timestamp = uk_dt.isoformat()
+        time_str = uk_dt.strftime("%H:%M:%S")
+        date_str = uk_dt.strftime("%Y-%m-%d")
 
         return {
             "id": self.id,
@@ -49,10 +49,14 @@ class TrainEvent(db.Model):
             "from_station": self.from_station_name,
             "to_station": self.to_station_name,
             "rtt_service_uid": self.rtt_service_uid,
+            "origin": self.origin_station or "Unknown",
+            "destination": self.destination_station or "Unknown",
             "time": time_str,
             "date": date_str,
             "timestamp": iso_timestamp,
         }
+
+
 class BerthMap(db.Model):
     """Maps signaling area + berth ID to human-readable station names."""
 
@@ -64,9 +68,7 @@ class BerthMap(db.Model):
     station_name = db.Column(db.String(100), nullable=False)
     tiploc = db.Column(db.String(20), nullable=True)  # Railway timing point code
 
-    __table_args__ = (
-        db.UniqueConstraint("area", "berth", name="unique_area_berth"),
-    )
+    __table_args__ = (db.UniqueConstraint("area", "berth", name="unique_area_berth"),)
 
 
 class Service(db.Model):
@@ -83,9 +85,7 @@ class Service(db.Model):
     destination_name = db.Column(db.String(100), nullable=False)
     destination_arr_time = db.Column(db.String(10), nullable=False)  # e.g. "15:02"
 
-    last_updated = db.Column(
-        db.DateTime, default=lambda: datetime.now(timezone.utc)
-    )
+    last_updated = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -96,4 +96,3 @@ class Service(db.Model):
             "destination": self.destination_name,
             "expected_at": self.destination_arr_time,
         }
-    

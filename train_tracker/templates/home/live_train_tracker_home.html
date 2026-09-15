@@ -1,22 +1,53 @@
 {% extends "base.html" %}
 
-{% block title %}Split-Flap Train Board{% endblock %}
+{% block title %}Train{% endblock %}
 
 {% block content %}
-<div class="board">
-    <div class="board-header">
-        <h1>Live Signaling Activity</h1>
-    </div>
 
-    <div class="row-labels">
-        <div>Time</div>
-        <div>Headcode</div>
-        <div>Movement</div>
-        <div style="text-align: right;">Area</div>
-    </div>
+<table class=" table-striped table-hover">
+  <thead>
+    <tr>
+      <th>Time</th>
+      <th>Headcode</th>
+      <th>Overall Service</th>
+      <th>Berth Movement</th>
+      <th>RTT Link</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for event in events %}
+    <tr id="events">
+      <td>{{ event.time }}</td>
+      <td><strong>{{ event.headcode }}</strong></td>
 
-    <div id="events">
-        <div class="empty">Loading live updates...</div>
-    </div>
-</div>
+
+      <td>
+        {% if event.origin and event.destination %}
+          {{ event.origin }} &rarr; {{ event.destination }}
+        {% else %}
+          <span class="text-muted">Route Unknown</span>
+        {% endif %}
+      </td>
+
+
+      <td>
+        {{ event.from_station }} ({{ event.from_berth }}) 
+        &rarr; 
+        {{ event.to_station }} ({{ event.to_berth }})
+      </td>
+
+
+      <td>
+        {% if event.rtt_service_uid %}
+          <a href="https://www.realtimetrains.co.uk/service/gb-nr:{{ event.rtt_service_uid }}/{{ event.date }}/detailed" target="_blank" class="btn btn-sm btn-outline-primary">
+            View Schedule
+          </a>
+        {% else %}
+          <span class="text-muted">N/A</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 {% endblock %}
