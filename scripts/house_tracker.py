@@ -84,6 +84,7 @@ if __name__ == "__main__":
         feed_username = secrets[0]
         feed_password = secrets[1]
 
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--durable", action="store_true")
     action = parser.add_mutually_exclusive_group(required=False)
