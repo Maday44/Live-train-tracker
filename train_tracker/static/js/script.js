@@ -18,7 +18,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // 1. Group items by date string
             const groupedByDate = data.reduce((acc, ev) => {
                 const dateKey = ev.date || "Today";
                 if (!acc[dateKey]) acc[dateKey] = [];
@@ -26,15 +25,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 return acc;
             }, {});
 
-            // 2. Iterate over date groups and build sections
             Object.keys(groupedByDate).forEach(dateStr => {
-                // Add a full-width header row for the date section
                 const dateHeaderRow = document.createElement("tr");
                 dateHeaderRow.className = "table-light fw-bold";
                 dateHeaderRow.innerHTML = `<td colspan="4" class="py-2">${dateStr}</td>`;
                 eventsEl.appendChild(dateHeaderRow);
 
-                // Populate events for this date
+
                 groupedByDate[dateStr].forEach(ev => {
                     // Clone the HTML template
                     const clone = templateEl.content.cloneNode(true);
