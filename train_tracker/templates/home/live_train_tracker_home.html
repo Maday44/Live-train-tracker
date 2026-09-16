@@ -18,39 +18,45 @@
           <th scope="col" class="text-end">RTT Link</th>
         </tr>
       </thead>
+      <!-- Adding id="events" so JavaScript can populate dynamic rows -->
       <tbody id="events">
-        {% for event in events %}
-        <tr class="event-row" {% if event.headcode %}onclick="if(typeof showTrainDetails === 'function') showTrainDetails('{{ event.headcode }}')" style="cursor: pointer;"{% endif %}>
-          <td class="time">{{ event.time }}</td>
-          <td class="headcode">{{ event.headcode }}</td>
-          <td class="movement">
-            {% if event.origin and event.destination %}
-              <div class="route-title">{{ event.origin }} &rarr; {{ event.destination }}</div>
-            {% else %}
-              <div class="route-unknown">Route Unknown</div>
-            {% endif %}
+        {% if grouped_events %}
+          {% for date, events_list in grouped_events.items() %}
+            <tr class="table-light fw-bold">
+              <td colspan="4" class="py-2">{{ date }}</td>
+            </tr>
+            {% for event in events_list %}
+            <tr class="event-row" {% if event.headcode %}onclick="if(typeof showTrainDetails === 'function') showTrainDetails('{{ event.headcode }}')" style="cursor: pointer;"{% endif %}>
+              <td class="time">{{ event.time }}</td>
+              <td class="headcode">{{ event.headcode }}</td>
+              <td class="movement">
+                {% if event.origin and event.destination %}
+                  <div class="route-title">{{ event.origin }} &rarr; {{ event.destination }}</div>
+                {% else %}
+                  <div class="route-unknown">Route Unknown</div>
+                {% endif %}
 
-            <div class="berth-subtext">
-                {{ event.from_berth }}
-              &rarr; 
-                {{ event.to_berth }}
-            </div>
-          </td>
-          <td class="area text-end">
-            {% if event.rtt_service_uid %}
-              <a href="https://www.realtimetrains.co.uk/service/gb-nr:{{ event.rtt_service_uid }}/{{ event.date }}/detailed" target="_blank" class="rtt-link btn btn-sm btn-outline-primary">
-                RTT
-              </a>
-            {% else %}
-              <span class="rtt-none text-muted">N/A</span>
-            {% endif %}
-          </td>
-        </tr>
+                <div class="berth-subtext">
+                    {{ event.from_berth }} &rarr; {{ event.to_berth }}
+                </div>
+              </td>
+              <td class="area text-end">
+                {% if event.rtt_service_uid %}
+                  <a href="https://www.realtimetrains.co.uk/service/gb-nr:{{ event.rtt_service_uid }}/{{ event.date }}/detailed" target="_blank" class="rtt-link btn btn-sm btn-outline-primary">
+                    RTT
+                  </a>
+                {% else %}
+                  <span class="rtt-none text-muted">N/A</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% endfor %}
         {% else %}
-        <tr>
-          <td colspan="4" class="empty text-center py-4">Waiting for trains near you :) ...</td>
-        </tr>
-        {% endfor %}
+          <tr>
+            <td colspan="4" class="empty text-center py-4">Waiting for trains near you :) ...</td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>

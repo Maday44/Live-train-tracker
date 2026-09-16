@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, render_template
@@ -8,7 +9,15 @@ home = Blueprint("home", __name__)
 
 @home.route("/")
 def index():
-    return render_template("home/live_train_tracker_home.html")
+    raw_events = TrainEvent.query.order_by(TrainEvent.timestamp.desc()).all()
+    
+    grouped_events = defaultdict(list)
+    for event in raw_events:
+        event_dict = event.to_dict()
+        grouped_events[event_dict["date"]].append(event_dict)
+
+    return render_template("home/live_train_tracker_home.html", grouped_events=grouped_events)
+
 
 
 # json of the train data
