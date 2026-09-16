@@ -3,68 +3,72 @@
 {% block title %}Train Board{% endblock %}
 
 {% block content %}
-<div class="board">
-  <div class="board-header">
+<div class="board container py-3">
+  <div class="board-header mb-3">
     <h1><span class="status-dot"></span>Live Movements</h1>
   </div>
 
-  <div class="row-labels">
-    <div>Time</div>
-    <div>Headcode</div>
-    <div>Service & Movement</div>
-    <div style="text-align: right;">RTT Link</div>
-  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th scope="col">Time</th>
+          <th scope="col">Headcode</th>
+          <th scope="col">Service & Movement</th>
+          <th scope="col" class="text-end">RTT Link</th>
+        </tr>
+      </thead>
+      <tbody id="events">
+        {% for event in events %}
+        <tr class="event-row" {% if event.headcode %}onclick="if(typeof showTrainDetails === 'function') showTrainDetails('{{ event.headcode }}')" style="cursor: pointer;"{% endif %}>
+          <td class="time">{{ event.time }}</td>
+          <td class="headcode">{{ event.headcode }}</td>
+          <td class="movement">
+            {% if event.origin and event.destination %}
+              <div class="route-title">{{ event.origin }} &rarr; {{ event.destination }}</div>
+            {% else %}
+              <div class="route-unknown">Route Unknown</div>
+            {% endif %}
 
-  <div id="events">
-    {% for event in events %}
-    <div class="event-row" {% if event.headcode %}onclick="if(typeof showTrainDetails === 'function') showTrainDetails('{{ event.headcode }}')" style="cursor: pointer;"{% endif %}>
-      <div class="time">{{ event.time }}</div>
-      <div class="headcode">{{ event.headcode }}</div>
-      
-      <div class="movement">
-        {% if event.origin and event.destination %}
-          <div class="route-title">{{ event.origin }} &rarr; {{ event.destination }}</div>
+            <div class="berth-subtext">
+                {{ event.from_berth }}
+              &rarr; 
+                {{ event.to_berth }}
+            </div>
+          </td>
+          <td class="area text-end">
+            {% if event.rtt_service_uid %}
+              <a href="https://www.realtimetrains.co.uk/service/gb-nr:{{ event.rtt_service_uid }}/{{ event.date }}/detailed" target="_blank" class="rtt-link btn btn-sm btn-outline-primary">
+                RTT
+              </a>
+            {% else %}
+              <span class="rtt-none text-muted">N/A</span>
+            {% endif %}
+          </td>
+        </tr>
         {% else %}
-          <div class="route-unknown">Route Unknown</div>
-        {% endif %}
-
-        <div class="berth-subtext">
-            {{ event.from_berth }}
-          &rarr; 
-            {{ event.to_berth }}
-        </div>
-      </div>
-
-      <div class="area">
-        {% if event.rtt_service_uid %}
-          <a href="https://www.realtimetrains.co.uk/service/gb-nr:{{ event.rtt_service_uid }}/{{ event.date }}/detailed" target="_blank" class="rtt-link">
-            RTT
-          </a>
-        {% else %}
-          <span class="rtt-none">N/A</span>
-        {% endif %}
-      </div>
-    </div>
-    {% else %}
-    <div class="empty">Waiting for trains near you :) ...</div>
-    {% endfor %}
+        <tr>
+          <td colspan="4" class="empty text-center py-4">Waiting for trains near you :) ...</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 
-
 <template id="event-row-template">
-  <div class="event-row" style="cursor: pointer;">
-    <div class="time"></div>
-    <div class="headcode"></div>
-    <div class="movement">
+  <tr class="event-row" style="cursor: pointer;">
+    <td class="time"></td>
+    <td class="headcode"></td>
+    <td class="movement">
       <div class="route-title"></div>
       <div class="route-unknown" style="display: none;">Route Unknown</div>
       <div class="berth-subtext"></div>
-    </div>
-    <div class="area">
-      <a class="rtt-link" target="_blank">RTT</a>
-      <span class="rtt-none" style="display: none;">N/A</span>
-    </div>
-  </div>
+    </td>
+    <td class="area text-end">
+      <a class="rtt-link btn btn-sm btn-outline-primary" target="_blank">RTT</a>
+      <span class="rtt-none text-muted" style="display: none;">N/A</span>
+    </td>
+  </tr>
 </template>
 {% endblock %}
