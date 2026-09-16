@@ -95,3 +95,12 @@ footer {
     color: var(--amber-dim);
     text-align: center;
 }
+
+.event-row .area a {
+    color: var(--amber);
+    text-decoration: underline;
+}
+
+.event-row .area a:hover {
+    color: #fff;
+}

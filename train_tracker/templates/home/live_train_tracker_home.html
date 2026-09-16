@@ -1,51 +1,70 @@
 {% extends "base.html" %}
 
-{% block title %}Train{% endblock %}
+{% block title %}Train Board{% endblock %}
 
 {% block content %}
+<div class="board">
+  <div class="board-header">
+    <h1><span class="status-dot"></span>Live Movements</h1>
+  </div>
 
-<table class=" table-striped table-hover">
-  <thead>
-    <tr>
-      <th>Time</th>
-      <th>Headcode</th>
-      <th>Overall Service</th>
-      <th>Berth Movement</th>
-      <th>RTT Link</th>
-    </tr>
-  </thead>
-  <tbody>
+  <div class="row-labels">
+    <div>Time</div>
+    <div>Headcode</div>
+    <div>Service & Movement</div>
+    <div style="text-align: right;">RTT Link</div>
+  </div>
+
+  <div id="events">
     {% for event in events %}
-    <tr id="events">
-      <td>{{ event.time }}</td>
-      <td><strong>{{ event.headcode }}</strong></td>
-
-
-      <td>
+    <div class="event-row" {% if event.headcode %}onclick="if(typeof showTrainDetails === 'function') showTrainDetails('{{ event.headcode }}')" style="cursor: pointer;"{% endif %}>
+      <div class="time">{{ event.time }}</div>
+      <div class="headcode">{{ event.headcode }}</div>
+      
+      <div class="movement">
         {% if event.origin and event.destination %}
-          {{ event.origin }} &rarr; {{ event.destination }}
+          <div class="route-title">{{ event.origin }} &rarr; {{ event.destination }}</div>
         {% else %}
-          <span class="text-muted">Route Unknown</span>
+          <div class="route-unknown">Route Unknown</div>
         {% endif %}
-      </td>
 
-      <td>
-        {{ event.from_station }} ({{ event.from_berth }}) 
-        &rarr; 
-        {{ event.to_station }} ({{ event.to_berth }})
-      </td>
+        <div class="berth-subtext">
+            {{ event.from_berth }}
+          &rarr; 
+            {{ event.to_berth }}
+        </div>
+      </div>
 
-      <td>
+      <div class="area">
         {% if event.rtt_service_uid %}
-          <a href="https://www.realtimetrains.co.uk/service/gb-nr:{{ event.rtt_service_uid }}/{{ event.date }}/detailed" target="_blank" class="btn btn-sm btn-outline-primary">
-            View Schedule
+          <a href="https://www.realtimetrains.co.uk/service/gb-nr:{{ event.rtt_service_uid }}/{{ event.date }}/detailed" target="_blank" class="rtt-link">
+            RTT
           </a>
         {% else %}
-          <span class="text-muted">N/A</span>
+          <span class="rtt-none">N/A</span>
         {% endif %}
-      </td>
-    </tr>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty">Waiting for trains near you :) ...</div>
     {% endfor %}
-  </tbody>
-</table>
+  </div>
+</div>
+
+
+<template id="event-row-template">
+  <div class="event-row" style="cursor: pointer;">
+    <div class="time"></div>
+    <div class="headcode"></div>
+    <div class="movement">
+      <div class="route-title"></div>
+      <div class="route-unknown" style="display: none;">Route Unknown</div>
+      <div class="berth-subtext"></div>
+    </div>
+    <div class="area">
+      <a class="rtt-link" target="_blank">RTT</a>
+      <span class="rtt-none" style="display: none;">N/A</span>
+    </div>
+  </div>
+</template>
 {% endblock %}

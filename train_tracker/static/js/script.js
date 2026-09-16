@@ -1,8 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     const eventsEl = document.getElementById("events");
+    const templateEl = document.getElementById("event-row-template");
 
     async function loadRecent() {
-        if (!eventsEl) return;
+        if (!eventsEl || !templateEl) return;
 
         try {
             const resp = await fetch("/events/recent");
@@ -11,23 +12,24 @@ document.addEventListener("DOMContentLoaded", () => {
             eventsEl.innerHTML = "";
 
             if (!data || data.length === 0) {
-                eventsEl.innerHTML = `<div class="empty">Waiting for live train events...</div>`;
+                const emptyDiv = document.createElement("div");
+                emptyDiv.className = "empty";
+                emptyDiv.textContent = "Waiting for live train events...";
+                eventsEl.appendChild(emptyDiv);
                 return;
             }
 
             data.forEach(ev => {
-                const fromLoc = ev.from_station || (ev.from_berth ? `Berth ${ev.from_berth}` : "N/A");
-                const toLoc = ev.to_station || (ev.to_berth ? `Berth ${ev.to_berth}` : "N/A");
+                // Clone the HTML
+                const clone = templateEl.content.cloneNode(true);
+                const row = clone.querySelector(".event-row");
 
-                // Ensure date string ends with 'Z' so JavaScript explicitly treats it as UTC
+                // Timestamp formatting
                 let rawTimestamp = ev.timestamp;
                 if (rawTimestamp && !rawTimestamp.endsWith("Z") && !rawTimestamp.includes("+")) {
                     rawTimestamp += "Z";
                 }
-
                 const dateObj = new Date(rawTimestamp);
-                
-                // British local time
                 const formattedTime = !isNaN(dateObj.getTime())
                     ? dateObj.toLocaleTimeString("en-GB", {
                         hour: "2-digit",
@@ -35,23 +37,39 @@ document.addEventListener("DOMContentLoaded", () => {
                         second: "2-digit",
                         timeZone: "Europe/London"
                     })
-                    : (ev.time || "N/A");
+                    : (ev.time);
 
-                const row = document.createElement("div");
-                row.className = "event-row";
-                row.style.cursor = "pointer";
-                
+
+                const fromStr = ev.from_berth;
+                const toStr = ev.to_berth; 
+
+
+                // 3. Bind pure values directly to cloned template elements
+                clone.querySelector(".time").textContent = formattedTime;
+                clone.querySelector(".headcode").textContent = ev.headcode || "";
+
+                if (ev.origin && ev.destination) {
+                    clone.querySelector(".route-title").textContent = `${ev.origin} → ${ev.destination}`;
+                } else {
+                    clone.querySelector(".route-title").style.display = "none";
+                    clone.querySelector(".route-unknown").style.display = "block";
+                }
+
+                clone.querySelector(".berth-subtext").textContent = `${fromStr} → ${toStr}`;
+
+                if (ev.rtt_service_uid) {
+                    const link = clone.querySelector(".rtt-link");
+                    link.href = `https://www.realtimetrains.co.uk/service/gb-nr:${ev.rtt_service_uid}/${ev.date}/detailed`;
+                } else {
+                    clone.querySelector(".rtt-link").style.display = "none";
+                    clone.querySelector(".rtt-none").style.display = "inline";
+                }
+
                 if (typeof showTrainDetails === "function") {
                     row.onclick = () => showTrainDetails(ev.headcode);
                 }
 
-                row.innerHTML = `
-                    <div class="time">${formattedTime}</div>
-                    <div class="headcode">${ev.headcode}</div>
-                    <div class="movement">${fromLoc} &rarr; ${toLoc}</div>
-                    <div class="area">[${ev.area}]</div>
-                `;
-                eventsEl.appendChild(row);
+                eventsEl.appendChild(clone);
             });
         } catch (e) {
             console.error("Failed to render train events:", e);
