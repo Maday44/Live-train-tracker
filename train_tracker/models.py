@@ -15,8 +15,8 @@ class TrainEvent(db.Model):
     area = db.Column(db.String(10), nullable=False)
     from_berth = db.Column(db.String(10), nullable=False)
     to_berth = db.Column(db.String(10), nullable=False)
-    # from_station_name = db.Column(db.String(100), nullable=True)
-    # to_station_name = db.Column(db.String(100), nullable=True)
+    from_station_name = db.Column(db.String(100), nullable=True)
+    to_station_name = db.Column(db.String(100), nullable=True)
     rtt_service_uid = db.Column(db.String(20), nullable=True)
     origin_station = db.Column(db.String(100), nullable=True)
     destination_station = db.Column(db.String(100), nullable=True)
@@ -46,8 +46,8 @@ class TrainEvent(db.Model):
             "area": self.area,
             "from_berth": self.from_berth,
             "to_berth": self.to_berth,
-            # "from_station": self.from_station_name,
-            # "to_station": self.to_station_name,
+            "from_station": self.from_station_name,
+            "to_station": self.to_station_name,
             "rtt_service_uid": self.rtt_service_uid,
             "origin": self.origin_station or "Unknown",
             "destination": self.destination_station or "Unknown",
@@ -71,7 +71,7 @@ class BerthMap(db.Model):
     __table_args__ = (db.UniqueConstraint("area", "berth", name="unique_area_berth"),)
 
 
-class Service(db.Model):
+class TrainService(db.Model):
     """Caches origin, destination, and schedule info retrieved from RTT API."""
 
     __tablename__ = "service_cache"
