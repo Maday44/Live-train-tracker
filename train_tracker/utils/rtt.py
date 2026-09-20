@@ -19,8 +19,10 @@ _headcode_cache = {}
 
 # Map Network Rail Area IDs to key stations on those routes.
 # The are maps for areas ids near my area and may pass by me
+# CRS codes
 AREA_LOCATIONS_MAP = {
-    "Q6": ["GRY", "TIL", "SPO", "PIT", "UPM", "BKG", "OCK", "RNM", "LBG"],  # C2C & Thameside Freight
+    # "Q6": ["GRY", "TIL", "SPO", "PIT", "UPM", "BKG", "OCK", "RNM", "LBG"],  # C2C & Thameside Freight
+    "Q6": ["GRY", "TIL", "SPO", "PIT", "UPM", "BKG", "OCK", "RNM", "LBG", "BEN", "LOS", "SOF", "SBY"],  # C2C & Thameside Freight
     "K": ["KGX", "FIN", "SVG", "PBO"],                                      # East Coast Mainline
     "L": ["LST", "CTO", "NRW", "IPS"],                                      # Great Eastern Mainline
     "C": ["SBD", "XTR", "CHM"],                                              # Anglia Corridor
@@ -63,7 +65,7 @@ def fetch_rtt_service_by_headcode(headcode, location_code, date_str, refresh_tok
     """
     cache_key = f"{date_str}:{headcode}"
     
-    if cache_key in _headcode_cache:
+    if _headcode_cache.get(cache_key):
         return _headcode_cache[cache_key]
 
     access_token = get_valid_access_token(refresh_token)
@@ -73,7 +75,7 @@ def fetch_rtt_service_by_headcode(headcode, location_code, date_str, refresh_tok
     found_locations = []
 
     # CRS location code 3 digits all caps with A-Z
-    if location_code and len(location_code) == 3 and not location_code.startswith("Berth"):
+    if location_code:
         found_locations.append(location_code.upper())
         
     # Append fallback area stations
@@ -118,14 +120,12 @@ def fetch_rtt_service_by_headcode(headcode, location_code, date_str, refresh_tok
 
     # Store None in cache so missing headcodes
     # Believe headcode old get for comerical trains need to look into business ones maybe 
-    _headcode_cache[cache_key] = None
     print(f"RTT NO MATCH - Headcode {headcode}", flush=True)
     return None
 
 
 def fetch_rtt_service(identifier, date_str, refresh_token, location_code=None, area_id=None, is_uid=False):
     """
-
     identifier - uses the Headcode ('4L19') or Service UID ('G07989')
     date_str - dates are formatted as '2026-09-16' etc.
     refresh_token - is the RTT API key in secrets.json
