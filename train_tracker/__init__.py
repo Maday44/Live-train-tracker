@@ -82,7 +82,8 @@ class StompListener(stomp.ConnectionListener):
                     area_match = area_id in TARGET_AREAS
                     berth_match = (
                         not TARGET_BERTHS
-                        or from_berth in TARGET_BERTHS
+                        # or from_berth in TARGET_BERTHS
+                        # dont wnat it to appear twice only to that berth one per train
                         or to_berth in TARGET_BERTHS
                     )
 

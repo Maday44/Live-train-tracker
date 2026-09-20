@@ -141,7 +141,7 @@ def fetch_rtt_service_by_headcode(
         except Exception as e:
             print(f"[RTT Error, CRS:{crs}] {e}", flush=True)
 
-    # 2. KEY FIX: Cache None so failed lookups (like 2R26) aren't re-queried continuously
+
     _headcode_cache[cache_key] = None
     print(f"RTT NO MATCH - Headcode {headcode}", flush=True)
     return None
