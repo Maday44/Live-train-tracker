@@ -5,7 +5,7 @@
 {% block content %}
 <div class="board container py-3">
   <div class="board-header mb-3">
-    <h1><span class="status-dot"></span>Live Movements</h1>
+    <h1><span class="status-dot"></span>Live Train Feed</h1>
   </div>
 
   <div class="table-responsive">
@@ -14,17 +14,25 @@
         <tr>
           <th scope="col">Time</th>
           <th scope="col">Headcode</th>
-          <th scope="col">Service & Movement</th>
+          <th scope="col">Movements</th>
           <th scope="col" class="text-end">RTT Link</th>
         </tr>
       </thead>
 
       <tbody id="events">
-        {% if grouped_events %}
-          {% for date, events_list in grouped_events.items() %}
-            <tr class="table-light fw-bold">
-              <td colspan="4" class="py-2">{{ date }}</td>
+        {% if categorised_trains %}
+          {% for day_date, events_list in categorised_trains.items() %}
+            <tr class="table-light ">
+              <td colspan="4" class="">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>{{ day_date }}</span>
+                  <span class="badge bg-secondary rounded-pill fs-6 fw-normal">
+                    {{ train_count_for_days.get(day_date, 0) }} Trains
+                  </span>
+                </div>
+              </td>
             </tr>
+
             {% for event in events_list %}
             <tr class="event-row" {% if event.headcode %}onclick="if(typeof showTrainDetails === 'function') showTrainDetails('{{ event.headcode }}')" style="cursor: pointer;"{% endif %}>
               <td class="time">{{ event.time }}</td>
@@ -32,17 +40,21 @@
               <td class="movement">
                 {% if event.origin and event.destination %}
                   <div class="route-title">{{ event.origin }} &rarr; {{ event.destination }}</div>
+                {% elif event.origin %}
+                  <div class="route-title">{{ event.origin }} &rarr; Unknown</div>
+                {% elif event.destination %}
+                  <div class="route-title">Unknown &rarr; {{ event.destination }}</div>
                 {% else %}
-                  <div class="route-unknown">Route Unknown</div>
+                  <div class="route-unknown text-muted">Route Unknown</div>
                 {% endif %}
 
-                <div class="berth-subtext">
+                <div class="berth-subtext text-muted">
                     {{ event.from_berth }} &rarr; {{ event.to_berth }}
                 </div>
               </td>
               <td class="area text-end">
                 {% if event.rtt_service_uid %}
-                  <a href="https://www.realtimetrains.co.uk/service/gb-nr:{{ event.rtt_service_uid }}/{{ event.date }}/detailed" target="_blank" class="rtt-link btn btn-sm btn-outline-primary">
+                  <a href="https://www.realtimetrains.co.uk/service/gb-nr:{{ event.rtt_service_uid }}/{{ day_date }}/detailed" target="_blank" class="rtt-link btn btn-sm btn-outline-primary">
                     RTT
                   </a>
                 {% else %}
@@ -60,7 +72,40 @@
       </tbody>
     </table>
   </div>
+
+ 
+{% if total_pages > 1 %}
+  <div class="d-flex justify-content-between align-items-center mt-3">
+    <div>
+      {% if page > 1 %}
+      <a href="{{ url_for('home.index', page=page-1) }}" class="btn colour-button">Previous</a>
+      {% endif %}
+    </div>
+
+    <div class="text-center">
+      Page {{ page }} of {{ total_pages }}
+    </div>
+
+    <div>
+      {% if page < total_pages %}
+      <a href="{{ url_for('home.index', page=page+1) }}" class="btn colour-button">Next</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 </div>
+
+
+<template id="date-header-template">
+  <tr class="table-light fw-bold">
+    <td colspan="4" class="pt-4 pb-2 px-2 fs-6 border-top">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="date-label"></span>
+        <span class="badge bg-secondary rounded-pill fs-6 fw-normal count-label"></span>
+      </div>
+    </td>
+  </tr>
+</template>
 
 <template id="event-row-template">
   <tr class="event-row" style="cursor: pointer;">

@@ -21,11 +21,7 @@ _headcode_cache = {}
 # The are maps for areas ids near my area and may pass by me
 # CRS codes
 AREA_LOCATIONS_MAP = {
-    # "Q6": ["GRY", "TIL", "SPO", "PIT", "UPM", "BKG", "OCK", "RNM", "LBG"],  # C2C & Thameside Freight
     "Q6": ["GRY", "TIL", "SPO", "PIT", "UPM", "BKG", "OCK", "RNM", "LBG", "BEN", "LOS", "SOF", "SBY"],  # C2C & Thameside Freight
-    "K": ["KGX", "FIN", "SVG", "PBO"],                                      # East Coast Mainline
-    "L": ["LST", "CTO", "NRW", "IPS"],                                      # Great Eastern Mainline
-    "C": ["SBD", "XTR", "CHM"],                                              # Anglia Corridor
 }
 
 
@@ -65,7 +61,8 @@ def fetch_rtt_service_by_headcode(headcode, location_code, date_str, refresh_tok
     """
     cache_key = f"{date_str}:{headcode}"
     
-    if _headcode_cache.get(cache_key):
+    # 1. Check cache first (returns dict or None if previously marked as unmatched)
+    if cache_key in _headcode_cache:
         return _headcode_cache[cache_key]
 
     access_token = get_valid_access_token(refresh_token)
@@ -87,8 +84,7 @@ def fetch_rtt_service_by_headcode(headcode, location_code, date_str, refresh_tok
     formatted_date = date_str.replace("/", "-")
     headers = {"Authorization": f"Bearer {access_token}"}
 
-
-    # loop until matched match
+    # Loop until matched match
     for crs in found_locations:
         url = "https://data.rtt.io/gb-nr/location"
         params = {"location": crs, "date": formatted_date}
@@ -99,6 +95,8 @@ def fetch_rtt_service_by_headcode(headcode, location_code, date_str, refresh_tok
                 data = res.json()
                 for service in data.get("services", []):
                     sched = service.get("scheduleMetadata", {})
+                    
+                    # Match on headcode OR matching operational train identity
                     if sched.get("trainReportingIdentity") == headcode:
                         origins = service.get("origin", [])
                         dests = service.get("destination", [])
@@ -106,23 +104,22 @@ def fetch_rtt_service_by_headcode(headcode, location_code, date_str, refresh_tok
                         dest_desc = dests[0].get("location", {}).get("description", "Unknown") if dests else "Unknown"
                         
                         result = {
-                            "rtt_service_uid": sched.get("identity"),
+                            "rtt_service_uid": service.get("serviceUid") or sched.get("identity"),
                             "origin": orig_desc,
                             "destination": dest_desc
                         }
                         
-                        # Cache the match so not looked for again
+                        # Cache the successful match
                         _headcode_cache[cache_key] = result
-                        print(f"RTT FOUND - Headcode {headcode} at CRS:{crs} -> {sched.get('identity')} ({orig_desc} -> {dest_desc})", flush=True)
+                        print(f"RTT FOUND - Headcode {headcode} at CRS:{crs} -> {result['rtt_service_uid']} ({orig_desc} -> {dest_desc})", flush=True)
                         return result
         except Exception as e:
             print(f"[RTT Error, CRS:{crs}] {e}", flush=True)
 
-    # Store None in cache so missing headcodes
-    # Believe headcode old get for comerical trains need to look into business ones maybe 
+    # 2. KEY FIX: Cache None so failed lookups (like 2R26) aren't re-queried continuously
+    _headcode_cache[cache_key] = None
     print(f"RTT NO MATCH - Headcode {headcode}", flush=True)
     return None
-
 
 def fetch_rtt_service(identifier, date_str, refresh_token, location_code=None, area_id=None, is_uid=False):
     """

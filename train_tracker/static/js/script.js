@@ -1,47 +1,84 @@
 document.addEventListener("DOMContentLoaded", () => {
     const eventsEl = document.getElementById("events");
     const templateEl = document.getElementById("event-row-template");
+    const headerTemplateEl = document.getElementById("date-header-template");
+
+    // Helper function for pages
+    function getPageQueryParam() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const page = parseInt(urlParams.get("page"), 10);
+        return isNaN(page) || page < 1 ? 1 : page;
+    }
 
     async function loadRecent() {
         if (!eventsEl || !templateEl) return;
 
+        const currentPage = getPageQueryParam();
+
         try {
-            const resp = await fetch("/events/recent");
+            // Fetch with the active page parameter attached
+            const resp = await fetch(`/events/recent?page=${currentPage}`);
+            if (!resp.ok) return;
+
             const data = await resp.json();
+            const items = Array.isArray(data) ? data : (data.items || []);
+            const countsMap = data.counts || {};
 
             eventsEl.innerHTML = "";
 
-            if (!data || data.length === 0) {
-                const emptyRow = document.createElement("tr");
-                emptyRow.innerHTML = `<td colspan="4" class="empty text-center py-4">Waiting for trains near you :) ...</td>`;
-                eventsEl.appendChild(emptyRow);
-                return;
-            }
+            // Group by date key
+            const groupedByDate = items.reduce((acc, train) => {
+                let dateKey = train.date;
+                if (!dateKey && train.timestamp) {
+                    dateKey = String(train.timestamp).split("T")[0].split(" ")[0];
+                }
+                dateKey = dateKey || "Today";
 
-            const groupedByDate = data.reduce((acc, ev) => {
-                const dateKey = ev.date || "Today";
                 if (!acc[dateKey]) acc[dateKey] = [];
-                acc[dateKey].push(ev);
+                acc[dateKey].push(train);
                 return acc;
             }, {});
 
+            // Process each date group
             Object.keys(groupedByDate).forEach(dateStr => {
-                const dateHeaderRow = document.createElement("tr");
-                dateHeaderRow.className = "table-light fw-bold";
-                dateHeaderRow.innerHTML = `<td colspan="4" class="py-2">${dateStr}</td>`;
-                eventsEl.appendChild(dateHeaderRow);
+                const dayEvents = groupedByDate[dateStr];
 
+                // count for trains
+                const Count = countsMap[dateStr] !== undefined ? countsMap[dateStr] : dayEvents.length;
 
-                groupedByDate[dateStr].forEach(ev => {
-                    // Clone the HTML template
+                // Create date group header row
+                if (headerTemplateEl) {
+                    const headerClone = headerTemplateEl.content.cloneNode(true);
+                    const dateSpan = headerClone.querySelector(".date-label");
+                    const countSpan = headerClone.querySelector(".count-label");
+
+                    if (dateSpan) dateSpan.textContent = dateStr;
+                    if (countSpan) countSpan.textContent = `${Count} Trains`;
+                    
+                    eventsEl.appendChild(headerClone);
+                } else {
+                    const dateHeaderRow = document.createElement("tr");
+                    dateHeaderRow.className = "table-light fw-bold";
+                    dateHeaderRow.innerHTML = `
+                        <td colspan="4" class="py-2 px-3 fs-6 border-top">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-secondary small">${dateStr}</span>
+                                <span class="badge bg-secondary rounded-pill small fw-normal">${Count} Trains</span>
+                            </div>
+                        </td>`;
+                    eventsEl.appendChild(dateHeaderRow);
+                }
+
+                // Render individual train rows for this date group
+                dayEvents.forEach(train => {
                     const clone = templateEl.content.cloneNode(true);
                     const row = clone.querySelector(".event-row");
 
-                    // Timestamp formatting
-                    let rawTimestamp = ev.timestamp;
-                    if (rawTimestamp && !rawTimestamp.endsWith("Z") && !rawTimestamp.includes("+")) {
+                    let rawTimestamp = train.timestamp;
+                    if (rawTimestamp && typeof rawTimestamp === "string" && !rawTimestamp.endsWith("Z") && !rawTimestamp.includes("+")) {
                         rawTimestamp += "Z";
                     }
+
                     const dateObj = new Date(rawTimestamp);
                     const formattedTime = !isNaN(dateObj.getTime())
                         ? dateObj.toLocaleTimeString("en-GB", {
@@ -50,34 +87,68 @@ document.addEventListener("DOMContentLoaded", () => {
                             second: "2-digit",
                             timeZone: "Europe/London"
                         })
-                        : (ev.time);
+                        : (train.time || "");
 
-                    const fromStr = ev.from_berth;
-                    const toStr = ev.to_berth; 
+                    const fromStr = train.from_berth || "";
+                    const toStr = train.to_berth || "";
 
-                    // Bind pure values directly to cloned template elements
-                    clone.querySelector(".time").textContent = formattedTime;
-                    clone.querySelector(".headcode").textContent = ev.headcode || "";
+                    // Populate row elements
+                    const timeEl = clone.querySelector(".time");
+                    if (timeEl) timeEl.textContent = formattedTime;
 
-                    if (ev.origin && ev.destination) {
-                        clone.querySelector(".route-title").textContent = `${ev.origin} → ${ev.destination}`;
+                    const headcodeEl = clone.querySelector(".headcode");
+                    if (headcodeEl) headcodeEl.textContent = train.headcode || "";
+
+                    const routeTitleEl = clone.querySelector(".route-title");
+                    const routeUnknownEl = clone.querySelector(".route-unknown");
+
+                    if (train.origin && train.destination) {
+                        if (routeTitleEl) {
+                            routeTitleEl.textContent = `${train.origin} → ${train.destination}`;
+                            routeTitleEl.style.display = "block";
+                        }
+                        if (routeUnknownEl) routeUnknownEl.style.display = "none";
+                    } else if (train.origin) {
+                        if (routeTitleEl) {
+                            routeTitleEl.textContent = `${train.origin} → Unknown`;
+                            routeTitleEl.style.display = "block";
+                        }
+                        if (routeUnknownEl) routeUnknownEl.style.display = "none";
+                    } else if (train.destination) {
+                        if (routeTitleEl) {
+                            routeTitleEl.textContent = `Unknown → ${train.destination}`;
+                            routeTitleEl.style.display = "block";
+                        }
+                        if (routeUnknownEl) routeUnknownEl.style.display = "none";
                     } else {
-                        clone.querySelector(".route-title").style.display = "none";
-                        clone.querySelector(".route-unknown").style.display = "block";
+                        if (routeTitleEl) routeTitleEl.style.display = "none";
+                        if (routeUnknownEl) routeUnknownEl.style.display = "block";
                     }
 
-                    clone.querySelector(".berth-subtext").textContent = `${fromStr} → ${toStr}`;
-
-                    if (ev.rtt_service_uid) {
-                        const link = clone.querySelector(".rtt-link");
-                        link.href = `https://www.realtimetrains.co.uk/service/gb-nr:${ev.rtt_service_uid}/${ev.date}/detailed`;
-                    } else {
-                        clone.querySelector(".rtt-link").style.display = "none";
-                        clone.querySelector(".rtt-none").style.display = "inline";
+                    const berthSubtextEl = clone.querySelector(".berth-subtext");
+                    if (berthSubtextEl) {
+                        berthSubtextEl.textContent = `${fromStr} → ${toStr}`;
                     }
 
-                    if (typeof showTrainDetails === "function") {
-                        row.onclick = () => showTrainDetails(ev.headcode);
+                    const rttLinkEl = clone.querySelector(".rtt-link");
+                    const rttNoneEl = clone.querySelector(".rtt-none");
+
+                    // RTT Link assignment logic
+                    if (train.rtt_service_uid) {
+                        // UID match -> Show clickable RTT button
+                        if (rttLinkEl) {
+                            rttLinkEl.href = `https://www.realtimetrains.co.uk/service/gb-nr:${train.rtt_service_uid}/${dateStr}/detailed`;
+                            rttLinkEl.style.display = "inline-block";
+                        }
+                        if (rttNoneEl) rttNoneEl.style.display = "none";
+                    } else {
+                        // No UID found (Unmatched service) -> Hide RTT button and show N/A
+                        if (rttLinkEl) rttLinkEl.style.display = "none";
+                        if (rttNoneEl) rttNoneEl.style.display = "inline";
+                    }
+
+                    if (row && typeof showTrainDetails === "function" && train.headcode) {
+                        row.onclick = () => showTrainDetails(train.headcode);
                     }
 
                     eventsEl.appendChild(clone);
@@ -88,6 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // refresh the page after 4 sec and updates 
     loadRecent();
-    setInterval(loadRecent, 3000);
+    setInterval(loadRecent, 4000);
 });
