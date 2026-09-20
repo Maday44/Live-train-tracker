@@ -50,9 +50,11 @@ def get_recent_events():
     daily_counts = utils.train_count_for_days(events)
     pagination = utils.paginate(events)
 
-    return jsonify({
-        "items": pagination["items"],
-        "counts": dict(daily_counts),
-        "page": pagination["page"],
-        "total_pages": pagination["total_pages"]
-    })
+    return jsonify(
+        {
+            "items": pagination["items"],
+            "counts": dict(daily_counts),
+            "page": pagination["page"],
+            "total_pages": pagination["total_pages"],
+        }
+    )

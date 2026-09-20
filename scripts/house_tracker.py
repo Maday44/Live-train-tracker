@@ -16,9 +16,8 @@ TIMEZONE_LONDON = timezone("Europe/London")
 # change for your area or areas you will liek to track
 TARGET_AREAS = ["Q6"]
 # Theres are the beths near me where I can hear them
-TARGET_BERTHS = ["0692","0693"]
+TARGET_BERTHS = ["0692", "0693"]
 # here platform 1 from 692
-
 
 
 class Listener(stomp.ConnectionListener):
@@ -83,7 +82,6 @@ if __name__ == "__main__":
         secrets = json.load(f)
         feed_username = secrets[0]
         feed_password = secrets[1]
-
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--durable", action="store_true")

@@ -115,11 +115,15 @@ class StompListener(stomp.ConnectionListener):
                                 refresh_token=api_key,
                                 location_code=from_station,
                                 area_id=area_id,
-                                is_uid=False
+                                is_uid=False,
                             )
-                            service_uid = rtt_info.get("rtt_service_uid") if rtt_info else None
+                            service_uid = (
+                                rtt_info.get("rtt_service_uid") if rtt_info else None
+                            )
                             origin = rtt_info.get("origin") if rtt_info else None
-                            destination = rtt_info.get("destination") if rtt_info else None
+                            destination = (
+                                rtt_info.get("destination") if rtt_info else None
+                            )
 
                             event = TrainEvent(
                                 headcode=headcode,
@@ -186,4 +190,3 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
 from train_tracker.views.home import home  # noqa E402
 
 app.register_blueprint(home)
-

@@ -36,7 +36,7 @@ def categorised_trains(paginated):
 
     for train in paginated:
         day_date = train.get("date")
-    
+
         if day_date:
             categorised_trains[day_date].append(train)
 
