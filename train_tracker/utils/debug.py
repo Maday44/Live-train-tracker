@@ -12,7 +12,19 @@ TEST_HEADCODE = str(input("What headcode would you like to search for: ")).upper
 TEST_DATE = datetime.now().strftime("%Y-%m-%d")
 
 
-TEST_CRS_LIST = ["TIL"]
+TEST_CRS_LIST = ["GRY",
+        "TIL",
+        "SPO",
+        "PIT",
+        "UPM",
+        "BKG",
+        "OCK",
+        "RNM",
+        "LBG",
+        "BEN",
+        "LOS",
+        "SOF",
+        "SBY",]
 
 def get_access_token():
     print("Authenticating with RTT")
@@ -34,7 +46,7 @@ def get_access_token():
 
 
 def test_location_boards(token, headcode, date_str):
-    print(f"Lookinf for Headcode: {headcode}")
+    print(f"Looking for Headcode: {headcode}")
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
     
     clean_target = headcode.strip().upper()
