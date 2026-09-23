@@ -32,6 +32,11 @@ AREA_LOCATIONS_MAP = {
         "LOS",
         "SOF",
         "SBY",
+        "TILBYJN",   # Tilbury Junction
+        "GRYSJN",    # Grays Junction
+        "PITSEAJN",  # Pitsea Junction
+        "UPMNSTRJ",  # Upminster Junction
+        "BRKNGJN",   # Barking Junction
     ],  # C2C & Thameside Freight
 }
 
