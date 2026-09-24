@@ -152,7 +152,6 @@ class StompListener(stomp.ConnectionListener):
 
 
 def start_stomp(flask_app):
-    """Maintains a resilient background connection to Network Rail with auto-retry."""
     while True:
         try:
             print("Connecting to Network Rail STOMP feed...", flush=True)

@@ -19,25 +19,45 @@ _headcode_cache = {}
 # CRS codes
 AREA_LOCATIONS_MAP = {
     "Q6": [
-        "GRY",
         "TIL",
-        "SPO",
+        "GRY",
+        "TILBYJN",
+        "GRYSJN",
+        "PSE",
         "PIT",
+        "BNF",
+        "LOS",
+        "SBY",
+        "SOC",
+        "CLK",
+        "WCF",
+        "SOE",
+        "TPB",
+        "SPO",
+        "TIL",
+        "GRY",
         "UPM",
         "BKG",
-        "OCK",
+        "FNC",
+        "LST",
+        "SRA",
+        "WHM",
+        "LHS",
+        "DDK",
         "RNM",
-        "LBG",
-        "BEN",
-        "LOS",
-        "SOF",
-        "SBY",
-        "TILBYJN",   # Tilbury Junction
-        "GRYSJN",    # Grays Junction
-        "PITSEAJN",  # Pitsea Junction
-        "UPMNSTRJ",  # Upminster Junction
-        "BRKNGJN",   # Barking Junction
-    ],  # C2C & Thameside Freight
+        "OCK",
+        "CFH",
+        "PFL",
+        "ETL",
+        "WHD",
+        "LAI",
+        "BSO",
+        "TILBYJN",
+        "GRYSJN",
+        "PITSEAJN",
+        "UPMNSTRJ",
+        "BRKNGJN",
+    ]
 }
 
 
@@ -145,7 +165,6 @@ def fetch_rtt_service_by_headcode(
                         return result
         except Exception as e:
             print(f"[RTT Error, CRS:{crs}] {e}", flush=True)
-
 
     _headcode_cache[cache_key] = None
     print(f"RTT NO MATCH - Headcode {headcode}", flush=True)
