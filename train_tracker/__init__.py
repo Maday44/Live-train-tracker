@@ -151,7 +151,11 @@ class StompListener(stomp.ConnectionListener):
             print(f"STOMP Parsing Error: {e}", flush=True)
 
 
+stomp_active = False
+
+
 def start_stomp(flask_app):
+    global stomp_active
     while True:
         try:
             print("Connecting to Network Rail STOMP feed...", flush=True)
@@ -166,6 +170,7 @@ def start_stomp(flask_app):
 
             conn.connect(username=username, passcode=password, wait=True)
             conn.subscribe(destination="/topic/TD_ALL_SIG_AREA", id=1, ack="auto")
+            stomp_active = True
             print(
                 "STOMP Listener successfully connected to /topic/TD_ALL_SIG_AREA",
                 flush=True,
@@ -175,6 +180,7 @@ def start_stomp(flask_app):
                 time.sleep(1)
 
         except Exception as err:
+            stomp_active = False
             print(
                 f"STOMP Connection dropped/failed: {err}. Retrying in 10s...",
                 flush=True,
@@ -182,7 +188,11 @@ def start_stomp(flask_app):
             time.sleep(10)
 
 
-# makes sure that
+def is_stomp_active():
+    """Helper function to read current status."""
+    return stomp_active
+
+
 if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
     threading.Thread(target=start_stomp, args=(app,), daemon=True).start()
     print("STOMP Listener thread started.", flush=True)
@@ -190,3 +200,11 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
 from train_tracker.views.home import home  # noqa E402
 
 app.register_blueprint(home)
+
+from train_tracker.views.doc import doc  # noqa E402
+
+app.register_blueprint(doc)
+
+from train_tracker.views.stats import stats  # noqa E402
+
+app.register_blueprint(stats)

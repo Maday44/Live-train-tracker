@@ -1,0 +1,14 @@
+.status-dot {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color:#FF3131;
+    margin-right: 7px;
+    vertical-align: middle;
+}
+
+.status-dot.active {
+    background-color: #AAFF00;
+    box-shadow: 0 0 8px #AAFF00;
+}

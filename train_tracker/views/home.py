@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from flask import Blueprint, jsonify, render_template
 from train_tracker.models import TrainEvent, db
 from train_tracker import utils
+from train_tracker import is_stomp_active
 
 home = Blueprint("home", __name__)
 
@@ -37,6 +38,7 @@ def index():
         page=pagination["page"],
         total_pages=pagination["total_pages"],
         today=date.today(),
+        active=is_stomp_active(),
     )
 
 

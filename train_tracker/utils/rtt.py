@@ -1,28 +1,18 @@
+import time
 import requests
 from datetime import datetime, timezone
 from requests.exceptions import RequestException
 
 """
-RTT train API
+RTT Train API Handler
 https://realtimetrains.github.io/api-specification/
-
-Access tokens only last couple of minutes when no loger valid request another
 """
 
 _token_cache = {"access_token": None, "valid_until": None}
-
-
 _headcode_cache = {}
 
-# Map Network Rail Area IDs to key stations on those routes.
-# The are maps for areas ids near my area and may pass by me
-# CRS codes
 AREA_LOCATIONS_MAP = {
     "Q6": [
-        "TIL",
-        "GRY",
-        "TILBYJN",
-        "GRYSJN",
         "PSE",
         "PIT",
         "BNF",
@@ -62,10 +52,8 @@ AREA_LOCATIONS_MAP = {
 
 
 def get_valid_access_token(refresh_token):
-    # Access tokens dont last long
     now = datetime.now(timezone.utc)
 
-    # Check if that token is still valid for more than 20 secs
     if _token_cache["access_token"] and _token_cache["valid_until"]:
         if (_token_cache["valid_until"] - now).total_seconds() > 20:
             return _token_cache["access_token"]
@@ -93,97 +81,110 @@ def get_valid_access_token(refresh_token):
 def fetch_rtt_service_by_headcode(
     headcode, location_code, date_str, refresh_token, area_id=None
 ):
-    """
-    Finds a service using a headcode (e.g., '2D40', '4L19') by searching
-    station schedules in the target area.
-    """
-    cache_key = f"{date_str}:{headcode}"
+    clean_headcode = headcode.strip().upper()
+    cache_key = f"{date_str}:{clean_headcode}"
 
-    # 1. Check cache first (returns dict or None if previously marked as unmatched)
-    if cache_key in _headcode_cache:
+    if cache_key in _headcode_cache and _headcode_cache[cache_key] is not None:
         return _headcode_cache[cache_key]
 
     access_token = get_valid_access_token(refresh_token)
-    if not access_token:
-        return None
 
-    found_locations = []
+    if access_token:
+        formatted_date = date_str.replace("/", "-")
+        headers = {"Authorization": f"Bearer {access_token}"}
 
-    # CRS location code 3 digits all caps with A-Z
-    if location_code:
-        found_locations.append(location_code.upper())
+        found_locations = []
+        if location_code:
+            found_locations.append(location_code.upper())
 
-    # Append fallback area stations
-    if area_id in AREA_LOCATIONS_MAP:
-        for crs in AREA_LOCATIONS_MAP[area_id]:
-            if crs not in found_locations:
-                found_locations.append(crs)
+        if area_id in AREA_LOCATIONS_MAP:
+            for crs in AREA_LOCATIONS_MAP[area_id]:
+                if crs not in found_locations:
+                    found_locations.append(crs)
 
-    formatted_date = date_str.replace("/", "-")
-    headers = {"Authorization": f"Bearer {access_token}"}
+        now = datetime.now(timezone.utc)
+        time_str = now.strftime("%H%M")
 
-    # Loop until matched match
-    for crs in found_locations:
-        url = "https://data.rtt.io/gb-nr/location"
-        params = {"location": crs, "date": formatted_date}
+        for crs in found_locations:
+            url = "https://data.rtt.io/gb-nr/location"
+            params = {
+                "location": crs,
+                "date": formatted_date,
+                "time": time_str,
+                "time_window": 120,
+            }
 
-        try:
-            res = requests.get(url, headers=headers, params=params, timeout=3)
-            if res.status_code == 200:
-                data = res.json()
-                for service in data.get("services", []):
-                    sched = service.get("scheduleMetadata", {})
+            time.sleep(0.20)
 
-                    # Match on headcode OR matching operational train identity
-                    if sched.get("trainReportingIdentity") == headcode:
-                        origins = service.get("origin", [])
-                        dests = service.get("destination", [])
-                        orig_desc = (
-                            origins[0].get("location", {}).get("description", "Unknown")
-                            if origins
-                            else "Unknown"
-                        )
-                        dest_desc = (
-                            dests[0].get("location", {}).get("description", "Unknown")
-                            if dests
-                            else "Unknown"
-                        )
+            try:
+                res = requests.get(url, headers=headers, params=params, timeout=3)
 
-                        result = {
-                            "rtt_service_uid": service.get("serviceUid")
-                            or sched.get("identity"),
-                            "origin": orig_desc,
-                            "destination": dest_desc,
-                        }
+                # Auto-retry handling if rate limited
+                if res.status_code == 429:
+                    time.sleep(2.1)
+                    res = requests.get(url, headers=headers, params=params, timeout=3)
 
-                        # Cache the successful match
-                        _headcode_cache[cache_key] = result
-                        print(
-                            f"RTT FOUND - Headcode {headcode} at CRS:{crs} -> {result['rtt_service_uid']} ({orig_desc} -> {dest_desc})",
-                            flush=True,
-                        )
-                        return result
-        except Exception as e:
-            print(f"[RTT Error, CRS:{crs}] {e}", flush=True)
+                if res.status_code == 200:
+                    data = res.json()
+                    for service in data.get("services", []):
+                        sched = service.get("scheduleMetadata", {})
 
-    _headcode_cache[cache_key] = None
-    print(f"RTT NO MATCH - Headcode {headcode}", flush=True)
+                        identities = [
+                            str(sched.get("trainReportingIdentity", ""))
+                            .strip()
+                            .upper(),
+                            str(sched.get("identity", "")).strip().upper(),
+                            str(service.get("trainIdentity", "")).strip().upper(),
+                        ]
+
+                        if clean_headcode in identities:
+                            origins = service.get("origin", [])
+                            dests = service.get("destination", [])
+
+                            orig_desc = (
+                                origins[0]
+                                .get("location", {})
+                                .get("description", "Unknown")
+                                if origins
+                                else "Unknown"
+                            )
+                            dest_desc = (
+                                dests[0]
+                                .get("location", {})
+                                .get("description", "Unknown")
+                                if dests
+                                else "Unknown"
+                            )
+
+                            # Handle null serviceUid by falling back to schedule identity
+                            service_uid = (
+                                service.get("serviceUid")
+                                or sched.get("identity")
+                                or sched.get("uniqueIdentity")
+                            )
+
+                            result = {
+                                "rtt_service_uid": service_uid,
+                                "origin": orig_desc,
+                                "destination": dest_desc,
+                            }
+
+                            _headcode_cache[cache_key] = result
+                            print(
+                                f"RTT FOUND - Headcode {clean_headcode} at CRS:{crs} -> {service_uid} ({orig_desc} -> {dest_desc})",
+                                flush=True,
+                            )
+                            return result
+            except Exception as e:
+                print(f"[RTT Error, CRS:{crs}] {e}", flush=True)
+
+    print(f"RTT NO MATCH - Headcode {clean_headcode}", flush=True)
     return None
 
 
 def fetch_rtt_service(
     identifier, date_str, refresh_token, location_code=None, area_id=None, is_uid=False
 ):
-    """
-    identifier - uses the Headcode ('4L19') or Service UID ('G07989')
-    date_str - dates are formatted as '2026-09-16' etc.
-    refresh_token - is the RTT API key in secrets.json
-    It to RTT roughly to then get short-lived access token,
-    which is then used for all train schedule queries.
-    location_code - Optional station CRS (e.g. 'GRY')
-    area_id: Signaling area ID like 'Q6'
-    is_uid: True if identifier is already a Service UID
-    """
     if not is_uid:
         return fetch_rtt_service_by_headcode(
             headcode=identifier,
@@ -208,12 +209,19 @@ def fetch_rtt_service(
             data = res.json()
             origins = data.get("origin", [])
             dests = data.get("destination", [])
+
             return {
                 "rtt_service_uid": data.get("serviceUid") or identifier,
-                "origin": origins[0].get("location", {}).get("description", "Unknown"),
-                "destination": dests[0]
-                .get("location", {})
-                .get("description", "Unknown"),
+                "origin": (
+                    origins[0].get("location", {}).get("description", "Unknown")
+                    if origins
+                    else "Unknown"
+                ),
+                "destination": (
+                    dests[0].get("location", {}).get("description", "Unknown")
+                    if dests
+                    else "Unknown"
+                ),
             }
     except RequestException as e:
         print(f"[RTT Error] {identifier}: {e}", flush=True)

@@ -5,7 +5,8 @@
 {% block content %}
 <div class="board container py-3">
   <div class="board-header mb-3">
-    <h1><span class="status-dot"></span>Live Train Feed</h1>
+    <h1>Live Train Feed</h1>
+    <p>Train records get removed every 24hrs</p>
   </div>
 
   <div class="table-responsive">
@@ -26,10 +27,10 @@
               <td colspan="4" class="">
                 <div class="d-flex justify-content-between align-items-center">
                   <span>{{ day_date }}</span>
-                  <span class="badge bg-secondary rounded-pill fs-6 fw-normal">
-                    {{ train_count_for_days.get(day_date, 0) }} Trains
+                  <span>
+                    <i class="bi bi-train-front"></i> {{ train_count_for_days.get(day_date, 0) }} Trains
                   </span>
-                </div>
+              </div>
               </td>
             </tr>
 
@@ -101,7 +102,9 @@
     <td colspan="4" class="pt-4 pb-2 px-2 fs-6 border-top">
       <div class="d-flex justify-content-between align-items-center">
         <span class="date-label"></span>
-        <span class="badge bg-secondary rounded-pill fs-6 fw-normal count-label"></span>
+        <span>
+          <i class="bi bi-train-front"> </i><span class="count-label"></span>
+        </span>
       </div>
     </td>
   </tr>

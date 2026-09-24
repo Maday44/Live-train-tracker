@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import request
 
 
-def paginate(items, set_per_page=25):
+def paginate(items, set_per_page=30):
     page = request.args.get("page", 1, type=int)
     per_page = set_per_page
     begin = (page - 1) * per_page

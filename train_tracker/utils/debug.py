@@ -3,7 +3,6 @@ import requests
 import time
 from datetime import datetime, timezone
 
-
 try:
     with open("secrets.json") as f:
         secrets = json.load(f)
@@ -13,14 +12,46 @@ except Exception as e:
     exit(1)
 
 REFRESH_TOKEN = api_key
-TEST_HEADCODE = str(input("What headcode would you like to search for: ")).strip().upper()
+TEST_HEADCODE = (
+    str(input("What headcode would you like to search for: ")).strip().upper()
+)
 
 
 TEST_CRS_LIST = [
-    "PSE", "PIT", "BNF", "LOS", "SBY", "SOC", "CLK", "WCF", "SOE", "TPB",
-    "SPO", "TIL", "GRY", "UPM", "BKG", "FNC", "LST", "SRA", "WHM", "LHS",
-    "DDK", "RNM", "OCK", "CFH", "PFL", "ETL", "WHD", "LAI", "BSO",
-    "TILBYJN", "GRYSJN", "PITSEAJN", "UPMNSTRJ", "BRKNGJN"
+    "PSE",
+    "PIT",
+    "BNF",
+    "LOS",
+    "SBY",
+    "SOC",
+    "CLK",
+    "WCF",
+    "SOE",
+    "TPB",
+    "SPO",
+    "TIL",
+    "GRY",
+    "UPM",
+    "BKG",
+    "FNC",
+    "LST",
+    "SRA",
+    "WHM",
+    "LHS",
+    "DDK",
+    "RNM",
+    "OCK",
+    "CFH",
+    "PFL",
+    "ETL",
+    "WHD",
+    "LAI",
+    "BSO",
+    "TILBYJN",
+    "GRYSJN",
+    "PITSEAJN",
+    "UPMNSTRJ",
+    "BRKNGJN",
 ]
 
 
@@ -45,15 +76,12 @@ def get_access_token():
 
 def test_location_boards(token, headcode):
     print(f"=== Searching for Headcode: {headcode} ===")
-    
+
     now = datetime.now(timezone.utc)
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H%M")
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json"
-    }
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
     for crs in TEST_CRS_LIST:
         url = "https://data.rtt.io/gb-nr/location"
@@ -61,7 +89,7 @@ def test_location_boards(token, headcode):
             "location": crs,
             "date": date_str,
             "time": time_str,
-            "time_window": 120
+            "time_window": 120,
         }
 
         # Pace requests to avoid HTTP 429 rate limits
@@ -96,8 +124,16 @@ def test_location_boards(token, headcode):
                     origins = s.get("origin", [])
                     dests = s.get("destination", [])
 
-                    orig_desc = origins[0].get("location", {}).get("description", "Unknown") if origins else "Unknown"
-                    dest_desc = dests[0].get("location", {}).get("description", "Unknown") if dests else "Unknown"
+                    orig_desc = (
+                        origins[0].get("location", {}).get("description", "Unknown")
+                        if origins
+                        else "Unknown"
+                    )
+                    dest_desc = (
+                        dests[0].get("location", {}).get("description", "Unknown")
+                        if dests
+                        else "Unknown"
+                    )
 
                     print(f"\n==========================================")
                     print(f" MATCH FOUND AT LOCATION: {crs}")

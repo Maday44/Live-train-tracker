@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentPage = getPageQueryParam();
 
         try {
-            // Fetch with the active page parameter attached
+            // Fetch json output
             const resp = await fetch(`/events/recent?page=${currentPage}`);
             if (!resp.ok) return;
 
@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // count for trains
                 const Count = countsMap[dateStr] !== undefined ? countsMap[dateStr] : dayEvents.length;
 
-                // Create date group header row
+
                 if (headerTemplateEl) {
                     const headerClone = headerTemplateEl.content.cloneNode(true);
                     const dateSpan = headerClone.querySelector(".date-label");
@@ -54,7 +54,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     if (dateSpan) dateSpan.textContent = dateStr;
                     if (countSpan) countSpan.textContent = `${Count} Trains`;
-                    
                     eventsEl.appendChild(headerClone);
                 } else {
                     const dateHeaderRow = document.createElement("tr");
@@ -63,13 +62,14 @@ document.addEventListener("DOMContentLoaded", () => {
                         <td colspan="4" class="py-2 px-3 fs-6 border-top">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-secondary small">${dateStr}</span>
-                                <span class="badge bg-secondary rounded-pill small fw-normal">${Count} Trains</span>
+                                <span>
+                                    <i class="bi bi-train-front "> </i>${Count} Trains
+                                </span>
                             </div>
                         </td>`;
                     eventsEl.appendChild(dateHeaderRow);
                 }
 
-                // Render individual train rows for this date group
                 dayEvents.forEach(train => {
                     const clone = templateEl.content.cloneNode(true);
                     const row = clone.querySelector(".event-row");
@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const fromStr = train.from_berth || "";
                     const toStr = train.to_berth || "";
 
-                    // Populate row elements
+                    // Populate the rows
                     const timeEl = clone.querySelector(".time");
                     if (timeEl) timeEl.textContent = formattedTime;
 
