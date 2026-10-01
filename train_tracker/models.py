@@ -57,6 +57,55 @@ class TrainEvent(db.Model):
         }
 
 
+class StationSchedule(db.Model):
+    __tablename__ = "train_schedule"
+
+    id = db.Column(db.Integer, primary_key=True)
+    headcode = db.Column(db.String(10), nullable=False, index=True)
+    rtt_service_uid = db.Column(db.String(20), nullable=False, index=True)
+
+    crs_code = db.Column(db.String(5), nullable=False, default="TIL", index=True)
+    origin_station = db.Column(db.String(100), nullable=True)
+    destination_station = db.Column(db.String(100), nullable=True)
+
+    is_cancelled = db.Column(db.Boolean, default=False)
+    status = db.Column(db.String(20))
+    delay_minutes = db.Column(db.Integer, default=0)
+    scheduled_time = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    actual_time = db.Column(db.DateTime(timezone=True), nullable=True)
+    msg_type = db.Column(db.String(10), nullable=True)
+    area = db.Column(db.String(10), nullable=True)
+    from_berth = db.Column(db.String(10), nullable=True)
+    to_berth = db.Column(db.String(10), nullable=True)
+
+    def to_dict(self):
+        def format_uk_time(dt):
+            if not dt:
+                return None
+            utc_dt = (
+                dt.replace(tzinfo=timezone.utc)
+                if dt.tzinfo is None
+                else dt.astimezone(timezone.utc)
+            )
+            return utc_dt.astimezone(UK_TZ)
+
+        sched_uk = format_uk_time(self.scheduled_time)
+        actual_uk = format_uk_time(self.actual_time)
+
+        return {
+            "id": self.id,
+            "headcode": self.headcode,
+            "rtt_service_uid": self.rtt_service_uid,
+            "origin": self.origin_station or "Unknown",
+            "destination": self.destination_station or "Unknown",
+            "scheduled_time": sched_uk.strftime("%H:%M") if sched_uk else None,
+            "actual_time": actual_uk.strftime("%H:%M") if actual_uk else "N/A",
+            "status": "CANCELLED" if self.is_cancelled else self.status,
+            "delay_minutes": self.delay_minutes,
+            "date": sched_uk.strftime("%Y-%m-%d") if sched_uk else None,
+        }
+
+
 class BerthMap(db.Model):
     """Maps signaling area + berth ID to human-readable station names."""
 
