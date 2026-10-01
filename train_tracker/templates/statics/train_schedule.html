@@ -1,9 +1,70 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Auto-refresh page every 60 seconds for live updates -->
+    <meta http-equiv="refresh" content="60">
+    <title>Tilbury Town</title>
+</head>
+<body>
+
 {% extends "base.html" %}
 
-{% block title %}Train Schedule{% endblock %}
+{% block title %}Stats{% endblock %}
 
 {% block content %}
-<h1>Tilbury Town Train Schedule</h1>
 
- 
+            <h1>Tilbury Town (TIL)</h1>
+            <p style="margin: 4px 0 0 0; color: #94a3b8;">Live Station Schedule</p>
+        </div>
+        <div class="refresh-info">
+            Auto-refreshes every 60s
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Headcode</th>
+                <th>Sched.</th>
+                <th>Actual / Est.</th>
+                <th>Origin</th>
+                <th>Destination</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for train in trains %}
+            <tr>
+                <td><span class="headcode">{{ train.headcode }}</span></td>
+                <td><strong>{{ train.scheduled_time }}</strong></td>
+                <td>{{ train.actual_time }}</td>
+                <td>{{ train.origin }}</td>
+                <td>{{ train.destination }}</td>
+                <td>
+                    {% if train.status == 'CANCELLED' %}
+                        <span class="status-badge badge-cancelled">CANCELLED</span>
+                    {% elif train.delay_minutes > 0 %}
+                        <span class="status-badge badge-late">LATE (+{{ train.delay_minutes }}m)</span>
+                    {% elif train.delay_minutes < 0 %}
+                        <span class="status-badge badge-early">EARLY ({{ train.delay_minutes }}m)</span>
+                    {% else %}
+                        <span class="status-badge badge-ontime">ON TIME</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center; color: #94a3b8; padding: 2rem;">
+                    No scheduled trains found for Tilbury Town today.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
 {% endblock %}
