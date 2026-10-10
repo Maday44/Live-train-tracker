@@ -12,6 +12,7 @@ def main_stats():
         "statics/stats.html",
     )
 
+
 @stats.route("/trainschedule")
 def train_schedule():
     try:
@@ -19,15 +20,19 @@ def train_schedule():
     except Exception as e:
         stats.logger.error(f"RTT Fetch Error: {e}")
 
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    
-    schedules = StationSchedule.query.filter(
-        StationSchedule.crs_code == "TIL",
-        StationSchedule.scheduled_time >= today_start
-    ).order_by(StationSchedule.scheduled_time.asc()).all()
+    today_start = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
 
+    schedules = (
+        StationSchedule.query.filter(
+            StationSchedule.crs_code == "TIL",
+            StationSchedule.scheduled_time >= today_start,
+        )
+        .order_by(StationSchedule.scheduled_time.asc())
+        .all()
+    )
 
     trains = [s.to_dict() for s in schedules]
 
     return render_template("statics/train_schedule.html", trains=trains)
-
