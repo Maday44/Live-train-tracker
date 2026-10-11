@@ -120,28 +120,56 @@ class BerthMap(db.Model):
     __table_args__ = (db.UniqueConstraint("area", "berth", name="unique_area_berth"),)
 
 
-class TrainService(db.Model):
-    """Caches origin, destination, and schedule info retrieved from RTT API."""
+class TrainStationStatics(db.Model):
+    """All the statics from the train stations that month"""
 
-    __tablename__ = "service_cache"
+    __tablename__ = "train_station_statics"
 
     id = db.Column(db.Integer, primary_key=True)
-    headcode = db.Column(db.String(10), nullable=False, index=True)
-    run_date = db.Column(db.String(10), nullable=False)  # YYYY-MM-DD
-    rtt_service_uid = db.Column(db.String(20), nullable=False, unique=True)
-    origin_name = db.Column(db.String(100), nullable=False)
-    origin_dep_time = db.Column(db.String(10), nullable=False)  # e.g. "14:15"
-    destination_name = db.Column(db.String(100), nullable=False)
-    destination_arr_time = db.Column(db.String(10), nullable=False)  # e.g. "15:02"
+    crs_code = db.Column(db.String(5), nullable=False, default="TIL", index=True)
+    month = db.Column(db.Integer, nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    number_of_trains_pass = db.Column(db.Integer, default=0, nullable=False)
+    number_of_trains_on_time = db.Column(db.Integer, default=0, nullable=False)
+    number_of_trains_delayed = db.Column(db.Integer, default=0, nullable=False)
+    number_of_trains_early = db.Column(db.Integer, default=0, nullable=False)
+    number_of_trains_cancelled = db.Column(db.Integer, default=0, nullable=False)
 
-    last_updated = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    total_delay_minutes = db.Column(db.Integer, default=0, nullable=False)
+    avg_delay_minutes = db.Column(db.Float, default=0.0)
+
+    last_updated = db.Column(
+        db.DateTime(timezone=True), 
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("crs_code", "year", "month", name="uix_station_year_month"),
+    )
+
+    @property
+    def on_time_percentage(self):
+        """Calculates percentage of non-cancelled trains that ran on time."""
+        effective_total = self.total_trains - self.number_of_trains_cancelled
+        if effective_total <= 0:
+            return 0.0
+        return round((self.number_of_trains_on_time / effective_total) * 100, 2)
 
     def to_dict(self):
         return {
-            "headcode": self.headcode,
-            "rtt_service_uid": self.rtt_service_uid,
-            "origin": self.origin_name,
-            "started_at": self.origin_dep_time,
-            "destination": self.destination_name,
-            "expected_at": self.destination_arr_time,
+            "id": self.id,
+            "crs_code": self.crs_code,
+            "period": f"{self.year}-{self.month:02d}",
+            "year": self.year,
+            "month": self.month,
+            "total_trains": self.total_trains,
+            "on_time": self.number_of_trains_on_time,
+            "delayed": self.number_of_trains_delayed,
+            "early": self.number_of_trains_early,
+            "cancelled": self.number_of_trains_cancelled,
+            "on_time_percentage": self.on_time_percentage,
+            "total_delay_minutes": self.total_delay_minutes,
+            "avg_delay_minutes": round(self.avg_delay_minutes, 1),
+            "last_updated": self.last_updated.isoformat() if self.last_updated else None
         }
