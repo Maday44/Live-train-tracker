@@ -1,0 +1,15 @@
+$access = (Invoke-RestMethod -Uri "https://data.rtt.io/api/get_access_token" -Headers @{ Authorization = "Bearer $refresh" }).token
+$r = Invoke-RestMethod -Uri "https://data.rtt.io/gb-nr/location?code=TIL&timeFrom=2026-10-11T23:00:00Z&timeWindow=1439" -Headers @{ Authorization = "Bearer $access" }
+
+$r.services | ForEach-Object {
+  $t = $_.temporalData
+  $d = if ($t.departure) { $t.departure } else { $t.arrival }
+  [pscustomobject]@{
+    Time     = $d.scheduleAdvertised.Substring(11,5)
+    Expected = if ($d.realtimeForecast) { $d.realtimeForecast.Substring(11,5) } else { "-" }
+    Type     = $_.scheduleMetadata.modeType
+    From     = $_.origin[0].location.description
+    To       = $_.destination[0].location.description
+    Cancelled = $d.isCancelled
+  }
+} | Sort-Object Time | Format-Table -AutoSize

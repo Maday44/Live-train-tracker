@@ -1,27 +1,14 @@
-
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Auto-refresh page every 60 seconds for live updates -->
-    <meta http-equiv="refresh" content="60">
-    <title>Tilbury Town</title>
-</head>
-<body>
-
 {% extends "base.html" %}
 
-{% block title %}Stats{% endblock %}
+{% block title %}Tilbury Town{% endblock %}
 
 {% block content %}
-
+{# If your original page had wrapper divs above the <h1>, keep those instead of these three #}
+<div class="container">
+    <div class="header">
+        <div>
             <h1>Tilbury Town (TIL)</h1>
             <p style="margin: 4px 0 0 0; color: #94a3b8;">Live Station Schedule</p>
-        </div>
-        <div class="refresh-info">
-            Auto-refreshes every 60s
         </div>
     </div>
 
@@ -30,7 +17,7 @@
             <tr>
                 <th>Headcode</th>
                 <th>Sched.</th>
-                <th>Actual / Est.</th>
+                <th>Expected</th>
                 <th>Origin</th>
                 <th>Destination</th>
                 <th>Status</th>
@@ -41,16 +28,18 @@
             <tr>
                 <td><span class="headcode">{{ train.headcode }}</span></td>
                 <td><strong>{{ train.scheduled_time }}</strong></td>
-                <td>{{ train.actual_time }}</td>
+                <td>{{ train.actual_time or '–' }}</td>
                 <td>{{ train.origin }}</td>
                 <td>{{ train.destination }}</td>
                 <td>
-                    {% if train.status == 'CANCELLED' %}
+                    {% if train.is_cancelled %}
                         <span class="status-badge badge-cancelled">CANCELLED</span>
                     {% elif train.delay_minutes > 0 %}
                         <span class="status-badge badge-late">LATE (+{{ train.delay_minutes }}m)</span>
-                    {% elif train.delay_minutes < 0 %}
-                        <span class="status-badge badge-early">EARLY ({{ train.delay_minutes }}m)</span>
+                    {% elif train.status == 'EARLY' %}
+                        <span class="status-badge badge-early">EARLY</span>
+                    {% elif not train.actual_time %}
+                        <span class="status-badge badge-ontime">SCHEDULED</span>
                     {% else %}
                         <span class="status-badge badge-ontime">ON TIME</span>
                     {% endif %}
